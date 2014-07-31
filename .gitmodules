@@ -1,0 +1,3 @@
+[submodule "mri"]
+	path = mri
+	url = git@github.com:adamgreen/mri.git
