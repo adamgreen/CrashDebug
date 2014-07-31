@@ -1,0 +1,19 @@
+==How to Clone
+This project uses submodules (ie. MRI).  Cloning requires a few more steps to get all of the necessary
+code.
+
+{{{
+git clone --recursive git@github.com:adamgreen/CrashDebug.git
+}}}
+
+**- or -**
+
+{{{
+git clone git@github.com:adamgreen/CrashDebug.git
+cd CrashDebug
+git submodule init
+git submodule update
+cd mri
+git submodule init
+git submodule update
+}}}
