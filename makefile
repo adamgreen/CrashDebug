@@ -185,20 +185,20 @@ $(eval $(call make_tests,LIBMRICORE,\
 $(eval $(call run_gcov,LIBMRICORE))
 
 #######################################
-# libcommon.a
-$(eval $(call make_library,LIBCOMMON,libcommon/src,libcommon.a,include))
-$(eval $(call make_tests,LIBCOMMON,libcommon/tests,include,))
-$(eval $(call run_gcov,LIBCOMMON))
-
-#######################################
 # libmocks.a
 $(eval $(call make_library,LIBMOCKS,libmocks/src,libmocks.a,include))
 $(eval $(call make_tests,LIBMOCKS,libmocks/tests,include,))
 $(eval $(call run_gcov,LIBMOCKS))
 
 #######################################
+# libcommon.a
+$(eval $(call make_library,LIBCOMMON,libcommon/src,libcommon.a,include))
+$(eval $(call make_tests,LIBCOMMON,libcommon/tests,include,$(HOST_LIBMOCKS_LIB)))
+$(eval $(call run_gcov,LIBCOMMON))
+
+#######################################
 # libCrashDebug.a
-$(eval $(call make_library,LIBCRASHDEBUG,libCrashDebug/src,libCrashDEbug.a,include mri/include libCrashDebug/mocks))
+$(eval $(call make_library,LIBCRASHDEBUG,libCrashDebug/src,libCrashDebug.a,include mri/include libCrashDebug/mocks))
 $(eval $(call make_tests,LIBCRASHDEBUG, \
                          libCrashDebug/tests libCrashDebug/mocks,include mri/include libCrashDebug/mocks, \
                          $(HOST_LIBCOMMON_LIB) \
