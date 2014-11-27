@@ -85,6 +85,7 @@ static struct stat    g_fstatStructure;
 static struct stat    g_statStructure;
 static FILE*          g_popenResult;
 static int            g_feofResult;
+static const char**   g_ppFgetsStart;
 static const char**   g_ppFgetsEnd;
 static const char**   g_ppFgetsCurr;
 CALL_GLOBAL(open)
@@ -211,7 +212,12 @@ static int mock_feof(FILE *stream)
 static char* mock_fgets(char * str, int size, FILE * stream)
 {
     if (g_ppFgetsCurr >= g_ppFgetsEnd)
+    {
+        // Rewind to start so that file can be process again.
+        g_ppFgetsCurr = g_ppFgetsStart;
+        // Return EOF condition once.
         return NULL;
+    }
 
     strncpy(str, *g_ppFgetsCurr++, size);
     str[size-1] = '\0';
@@ -321,6 +327,7 @@ void mockFileIo_SetFEOFCallResult(int result)
 
 void mockFileIo_SetFgetsData(const char** ppLines, size_t lineCount)
 {
+    g_ppFgetsStart = ppLines;
     g_ppFgetsCurr = ppLines;
     g_ppFgetsEnd = ppLines + lineCount;
 }
@@ -337,4 +344,7 @@ void mockFileIo_Uninit(void)
     g_readResult = 0;
     g_writeResult = 0;
     mockFileIo_SetCloseToFail(0, 0);
+    g_ppFgetsStart = NULL;
+    g_ppFgetsCurr = NULL;
+    g_ppFgetsEnd = NULL;
 }

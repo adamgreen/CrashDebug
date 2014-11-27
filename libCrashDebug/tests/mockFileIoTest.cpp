@@ -409,3 +409,18 @@ TEST(mockFileIo, SetFgetsData_TwoLines)
         pResult = fgets(buffer, sizeof(buffer), NULL);
     CHECK_EQUAL(NULL, pResult);
 }
+
+TEST(mockFileIo, SetFgetsData_OneLine_MakeSureThatDataRewindsAfterEOF)
+{
+    const char* ppTestData[] = { "Line1" };
+    char        buffer[16];
+    mockFileIo_SetFgetsData(ppTestData, ARRAY_SIZE(ppTestData));
+        char* pResult = fgets(buffer, sizeof(buffer), NULL);
+    CHECK_EQUAL(buffer, pResult);
+    STRCMP_EQUAL(ppTestData[0], buffer);
+        pResult = fgets(buffer, sizeof(buffer), NULL);
+    CHECK_EQUAL(NULL, pResult);
+        pResult = fgets(buffer, sizeof(buffer), NULL);
+    CHECK_EQUAL(buffer, pResult);
+    STRCMP_EQUAL(ppTestData[0], buffer);
+}
