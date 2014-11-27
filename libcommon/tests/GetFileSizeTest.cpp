@@ -48,7 +48,7 @@ TEST_GROUP(GetFileSize)
 
 TEST(GetFileSize, FailFSeek_ShouldThrow)
 {
-    fseekSetFailureCode(-1);
+    fseekSetReturn(-1);
     __try_and_catch( GetFileSize(m_testFile) );
     validateExceptionThrown(fileException);
 }
@@ -62,7 +62,7 @@ TEST(GetFileSize, FailFTell_ShouldThrow)
 
 TEST(GetFileSize, FailSecondFSeek_ShouldThrow)
 {
-    fseekSetFailureCode(-1);
+    fseekSetReturn(-1);
     fseekSetCallsBeforeFailure(1);
     __try_and_catch( GetFileSize(m_testFile) );
     validateExceptionThrown(fileException);

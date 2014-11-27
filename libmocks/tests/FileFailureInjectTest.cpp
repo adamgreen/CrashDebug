@@ -84,7 +84,7 @@ TEST(FileFailureInject, SuccessfulFSeek)
 TEST(FileFailureInject, FailFSeek)
 {
     openFile();
-    fseekSetFailureCode(-1);
+    fseekSetReturn(-1);
     fseekSetCallsBeforeFailure(0);
     LONGS_EQUAL(-1, hook_fseek(m_pFile, 0, SEEK_SET));
     fseekRestore();
@@ -93,7 +93,7 @@ TEST(FileFailureInject, FailFSeek)
 TEST(FileFailureInject, FailSecondFSeek)
 {
     openFile();
-    fseekSetFailureCode(-1);
+    fseekSetReturn(-1);
     fseekSetCallsBeforeFailure(1);
     LONGS_EQUAL(0, hook_fseek(m_pFile, 0, SEEK_SET));
     LONGS_EQUAL(-1, hook_fseek(m_pFile, 0, SEEK_SET));

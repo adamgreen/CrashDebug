@@ -30,7 +30,7 @@ void fopenRestore(void);
 void fcloseIgnore(void);
 void fcloseRestore(void);
 
-void fseekSetFailureCode(int failureReturn);
+void fseekSetReturn(int failureReturn);
 void fseekSetCallsBeforeFailure(int callCountToAllowBeforeFailing);
 void fseekRestore(void);
 

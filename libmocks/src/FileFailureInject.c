@@ -75,7 +75,7 @@ void fcloseRestore(void)
 
 
 static int mock_fseek(FILE* stream, long offset, int whence);
-void fseekSetFailureCode(int failureReturn)
+void fseekSetReturn(int failureReturn)
 {
     g_fseekFailureReturn = failureReturn;
     hook_fseek = mock_fseek;
