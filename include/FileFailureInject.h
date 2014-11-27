@@ -18,13 +18,17 @@
 
 /* Pointer to file I/O routines which can intercepted by this module. */
 extern FILE*  (*hook_fopen)(const char* filename, const char* mode);
+extern int    (*hook_fclose)(FILE* stream);
 extern int    (*hook_fseek)(FILE* stream, long offset, int whence);
 extern long   (*hook_ftell)(FILE* stream);
 extern size_t (*hook_fwrite)(const void* ptr, size_t size, size_t nitems, FILE* stream);
 extern size_t (*hook_fread)(void* ptr, size_t size, size_t nitems, FILE* stream);
 
-void fopenFail(FILE* pFailureReturn);
+void fopenSetReturn(FILE* pFailureReturn);
 void fopenRestore(void);
+
+void fcloseIgnore(void);
+void fcloseRestore(void);
 
 void fseekSetFailureCode(int failureReturn);
 void fseekSetCallsBeforeFailure(int callCountToAllowBeforeFailing);
@@ -43,6 +47,7 @@ void freadRestore(void);
 
 /* Force file I/O routines to go through hooking routines in unit tests. */
 #define fopen  hook_fopen
+#define fclose hook_fclose
 #define fseek  hook_fseek
 #define ftell  hook_ftell
 #define fwrite hook_fwrite

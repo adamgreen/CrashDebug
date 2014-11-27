@@ -62,10 +62,17 @@ TEST(FileFailureInject, SuccessfulFOpen)
 
 TEST(FileFailureInject, FailFOpen)
 {
-    fopenFail(NULL);
+    fopenSetReturn(NULL);
     openFile();
     fopenRestore();
     POINTERS_EQUAL(NULL, m_pFile);
+}
+
+TEST(FileFailureInject, IgnoreCloseWithInvalidPointer)
+{
+    fcloseIgnore();
+    fclose((FILE*)1);
+    fcloseRestore();
 }
 
 TEST(FileFailureInject, SuccessfulFSeek)

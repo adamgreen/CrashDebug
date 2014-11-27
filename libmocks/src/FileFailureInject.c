@@ -18,6 +18,7 @@
 
 
 FILE*  (*hook_fopen)(const char* filename, const char* mode) = fopen;
+int    (*hook_fclose)(FILE* stream) = fclose;
 int    (*hook_fseek)(FILE* stream, long offset, int whence) = fseek;
 long   (*hook_ftell)(FILE* stream) = ftell;
 size_t (*hook_fwrite)(const void* ptr, size_t size, size_t nitems, FILE* stream) = fwrite;
@@ -36,7 +37,7 @@ void freadRestore(void);
 
 
 static FILE* mock_fopen(const char* filename, const char* mode);
-void fopenFail(FILE* pFailureReturn)
+void fopenSetReturn(FILE* pFailureReturn)
 {
     hook_fopen = mock_fopen;
     g_fopenFailureReturn = pFailureReturn;
@@ -51,6 +52,25 @@ static FILE* mock_fopen(const char* filename, const char* mode)
 void fopenRestore(void)
 {
     hook_fopen = fopen;
+}
+
+
+static int mock_fclose(FILE* pFile);
+void fcloseIgnore(void)
+{
+    hook_fclose = mock_fclose;
+}
+
+static int mock_fclose(FILE* pFile)
+{
+    return 0;
+}
+
+
+
+void fcloseRestore(void)
+{
+    hook_fclose = fclose;
 }
 
 
