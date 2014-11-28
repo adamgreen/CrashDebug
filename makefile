@@ -208,12 +208,11 @@ $(eval $(call run_gcov,LIBCRASHDEBUG))
 
 #######################################
 # CrashDebug Executable
-#$(eval $(call make_app,pinkySim,main,include,$(HOST_LIBCOMMON_LIB) \
-#                                             $(HOST_LIBMRICORE_LIB) \
-#                                             $(HOST_LIBMEMSIM_LIB) \
-#                                             $(HOST_LIBPINKYSIM_LIB) \
-#                                             $(HOST_LIBMRI4SIM_LIB) \
-#                                             $(HOST_LIBCOMMSOCK_LIB)))
+$(eval $(call make_app,CrashDebug,main,include,$(HOST_LIBCOMMON_LIB) \
+                                               $(HOST_LIBMRICORE_LIB) \
+                                               $(HOST_LIBMEMSIM_LIB) \
+                                               $(HOST_LIBCRASHDEBUG_LIB) \
+                                               ))
 
 
 
