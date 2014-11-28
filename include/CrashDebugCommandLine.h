@@ -23,6 +23,7 @@ typedef struct CrashDebugCommandLine
     const char*     pDumpFilename;
     IMemory*        pMemory;
     RegisterContext context;
+    uint32_t        baseAddress;
 } CrashDebugCommandLine;
 
 

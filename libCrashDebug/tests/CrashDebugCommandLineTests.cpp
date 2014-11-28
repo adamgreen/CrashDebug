@@ -164,17 +164,32 @@ TEST(CrashDebugCommandLine, InvalidCommandLineFlag_ShouldThrow)
 
 TEST(CrashDebugCommandLine, JustImageFilename_ShouldThrowAsDumpFilenameIsRequiredToo)
 {
-    addArg("--image");
+    addArg("--bin");
     addArg(g_imageFilename);
+    addArg("0x0");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
     validateExceptionThrownAndUsageStringDisplayed();
     CHECK(m_commandLine.pMemory == NULL);
 }
 
-TEST(CrashDebugCommandLine, LeaveOffImageFilename_ShouldThrow)
+TEST(CrashDebugCommandLine, LeaveOffImageFilenameAndBaseAddress_ShouldThrow)
 {
-    addArg("--image");
+    addArg("--dump");
+    addArg(g_dumpFilename);
+    addArg("--bin");
+    createTestFiles();
+        __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
+    validateExceptionThrownAndUsageStringDisplayed();
+    CHECK(m_commandLine.pMemory == NULL);
+}
+
+TEST(CrashDebugCommandLine, LeaveOffBaseAddress_ShouldThrow)
+{
+    addArg("--dump");
+    addArg(g_dumpFilename);
+    addArg("--bin");
+    addArg(g_imageFilename);
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
     validateExceptionThrownAndUsageStringDisplayed();
@@ -183,8 +198,9 @@ TEST(CrashDebugCommandLine, LeaveOffImageFilename_ShouldThrow)
 
 TEST(CrashDebugCommandLine, LeaveOffDumpFilename_ShouldThrow)
 {
-    addArg("--image");
+    addArg("--bin");
     addArg(g_imageFilename);
+    addArg("0x0");
     addArg("--dump");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
@@ -194,8 +210,9 @@ TEST(CrashDebugCommandLine, LeaveOffDumpFilename_ShouldThrow)
 
 TEST(CrashDebugCommandLine, ValidImageAndDumpFilenames_ValidateMemoryAndRegisters)
 {
-    addArg("--image");
+    addArg("--bin");
     addArg(g_imageFilename);
+    addArg("0x0");
     addArg("--dump");
     addArg(g_dumpFilename);
     createTestFiles();
@@ -225,10 +242,45 @@ TEST(CrashDebugCommandLine, ValidImageAndDumpFilenames_ValidateMemoryAndRegister
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
 }
 
+TEST(CrashDebugCommandLine, ValidImageAndDumpFilenames_DifferentBaseAddress_ValidateMemoryAndRegisters)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x4000");
+    addArg("--dump");
+    addArg(g_dumpFilename);
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00004000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00004004));
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+}
+
 TEST(CrashDebugCommandLine, FailImageFileOpen_ShouldThrow)
 {
-    addArg("--image");
+    addArg("--bin");
     addArg(g_imageFilename);
+    addArg("0x0");
     addArg("--dump");
     addArg(g_dumpFilename);
     createTestFiles();
@@ -239,8 +291,9 @@ TEST(CrashDebugCommandLine, FailImageFileOpen_ShouldThrow)
 
 TEST(CrashDebugCommandLine, FailImageFileSeekInGetFileSize_ShouldThrow)
 {
-    addArg("--image");
+    addArg("--bin");
     addArg(g_imageFilename);
+    addArg("0x0");
     addArg("--dump");
     addArg(g_dumpFilename);
     createTestFiles();
@@ -251,8 +304,9 @@ TEST(CrashDebugCommandLine, FailImageFileSeekInGetFileSize_ShouldThrow)
 
 TEST(CrashDebugCommandLine, FailImageFileBufferAllocation_ShouldThrow)
 {
-    addArg("--image");
+    addArg("--bin");
     addArg(g_imageFilename);
+    addArg("0x0");
     addArg("--dump");
     addArg(g_dumpFilename);
     createTestFiles();
@@ -263,8 +317,9 @@ TEST(CrashDebugCommandLine, FailImageFileBufferAllocation_ShouldThrow)
 
 TEST(CrashDebugCommandLine, FailImageFileRead_ShouldThrow)
 {
-    addArg("--image");
+    addArg("--bin");
     addArg(g_imageFilename);
+    addArg("0x0");
     addArg("--dump");
     addArg(g_dumpFilename);
     createTestFiles();
@@ -275,8 +330,9 @@ TEST(CrashDebugCommandLine, FailImageFileRead_ShouldThrow)
 
 TEST(CrashDebugCommandLine, FailMemoryRegionAllocation_ShouldThrow)
 {
-    addArg("--image");
+    addArg("--bin");
     addArg(g_imageFilename);
+    addArg("0");
     addArg("--dump");
     addArg(g_dumpFilename);
     createTestFiles();
