@@ -270,15 +270,25 @@ TEST(MemorySim, LoadFromFlashImage)
     uint32_t flashBinary[2] = { 0x10000004, 0x00000200 };
     static const uint32_t region1 = 0x00000000;
     MemorySim_CreateRegion(m_pMemory, region1, 8);
-        MemorySim_LoadFromFlashImage(m_pMemory, flashBinary, sizeof(flashBinary));
+        MemorySim_LoadFromFlashImage(m_pMemory, FLASH_BASE_ADDRESS, flashBinary, sizeof(flashBinary));
     CHECK_EQUAL(flashBinary[0], IMemory_Read32(m_pMemory, FLASH_BASE_ADDRESS));
     CHECK_EQUAL(flashBinary[1], IMemory_Read32(m_pMemory, FLASH_BASE_ADDRESS + 4));
+}
+
+TEST(MemorySim, LoadFromFlashImage_UseDifferentBaseAddress)
+{
+    uint32_t flashBinary[2] = { 0x10000004, 0x00000200 };
+    static const uint32_t region1 = 0x00004000;
+    MemorySim_CreateRegion(m_pMemory, region1, 8);
+        MemorySim_LoadFromFlashImage(m_pMemory, region1, flashBinary, sizeof(flashBinary));
+    CHECK_EQUAL(flashBinary[0], IMemory_Read32(m_pMemory, region1));
+    CHECK_EQUAL(flashBinary[1], IMemory_Read32(m_pMemory, region1 + 4));
 }
 
 TEST(MemorySim, AttemptLoadFromFlashImageToInvalidRegions_ShouldThrow)
 {
     uint32_t flashBinary[2] = { 0x10000004, 0x00000200 };
-    __try_and_catch( MemorySim_LoadFromFlashImage(m_pMemory, flashBinary, sizeof(flashBinary)) );
+    __try_and_catch( MemorySim_LoadFromFlashImage(m_pMemory, FLASH_BASE_ADDRESS, flashBinary, sizeof(flashBinary)) );
     validateExceptionThrown(busErrorException);
 }
 

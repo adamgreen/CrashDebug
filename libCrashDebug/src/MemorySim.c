@@ -241,7 +241,7 @@ __throws void MemorySim_CreateRegionsFromFlashImage(IMemory* pMemory, const void
         __throw(bufferOverrunException);
 
     MemorySim_CreateRegion(pMemory, FLASH_BASE_ADDRESS, flashImageSize);
-    MemorySim_LoadFromFlashImage(pMemory, pFlashImage, flashImageSize);
+    MemorySim_LoadFromFlashImage(pMemory, FLASH_BASE_ADDRESS, pFlashImage, flashImageSize);
 
     __try
     {
@@ -260,10 +260,10 @@ __throws void MemorySim_CreateRegionsFromFlashImage(IMemory* pMemory, const void
     }
 }
 
-__throws void MemorySim_LoadFromFlashImage(IMemory* pMemory, const void* pFlashImage, uint32_t flashImageSize)
+__throws void MemorySim_LoadFromFlashImage(IMemory* pMemory, uint32_t baseAddress, const void* pFlashImage, uint32_t flashImageSize)
 {
     const uint32_t* pSrcWord = (uint32_t*)pFlashImage;
-    uint32_t        address = FLASH_BASE_ADDRESS;
+    uint32_t        address = baseAddress;
     const uint8_t*  pSrcByte;
 
     while (flashImageSize > sizeof(uint32_t))
