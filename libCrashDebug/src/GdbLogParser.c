@@ -25,7 +25,7 @@ typedef struct ParseObject
     uint32_t         regionStart;
     uint32_t         regionSize;
     uint32_t         nextExpectedAddress;
-    char             lineText[128];
+    char             lineText[1024];
 } ParseObject;
 
 typedef enum ParseType
