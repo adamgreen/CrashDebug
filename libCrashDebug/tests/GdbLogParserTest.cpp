@@ -152,6 +152,25 @@ TEST(GdbLogParser, OneLineLogFile_4RamValues_ShouldReturn4WordRegion)
     CHECK_EQUAL(0x44444444, IMemory_Read32(m_pMem, 0x1000000c));
 }
 
+TEST(GdbLogParser, OneLineLogFile_AddressSymbolAnd4RamValues_ShouldReturn4WordRegion)
+{
+    static const char* xmlForMemory = "<?xml version=\"1.0\"?>"
+                                      "<!DOCTYPE memory-map PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\" \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
+                                      "<memory-map>"
+                                      "<memory type=\"ram\" start=\"0x10000000\" length=\"0x10\"></memory>"
+                                      "</memory-map>";
+    static const char* testLines[] = { "0x10000000 <impure_data>:\t0x11111111\t0x22222222\t0x33333333\t0x44444444" };
+
+    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+        GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
+    const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
+    STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_pMem, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_pMem, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_pMem, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_pMem, 0x1000000c));
+}
+
 TEST(GdbLogParser, OneLineLogFile_5RamValues_ShouldReturn4WordRegion)
 {
     static const char* xmlForMemory = "<?xml version=\"1.0\"?>"

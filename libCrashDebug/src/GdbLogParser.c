@@ -65,6 +65,8 @@ static void parseLines(IMemory* pMem,
                        void (*passHandler)(ParseObject*, const ParseResults*));
 static ParseResults parseLine(const char* pLine);
 static int isMemoryLine(const char* pLine);
+static int is8DigitHexValue(const char* pLine);
+static int isHexDigit(char c);
 static ParseResults parseMemoryLine(const char* pLine);
 static const char* parseAddress(ParseResults* pResults, const char* pLine);
 static int areMoreValuesToParseOnLine(const ParseResults* pResults, const char* pLine);
@@ -178,10 +180,28 @@ static ParseResults parseLine(const char* pLine)
 
 static int isMemoryLine(const char* pLine)
 {
-    return (strlen(pLine) > 11 &&
-            pLine[0] == '0' &&
+    return (strlen(pLine) > 11 && is8DigitHexValue(pLine));
+}
+
+static int is8DigitHexValue(const char* pLine)
+{
+    return (pLine[0] == '0' &&
             pLine[1] == 'x' &&
-            pLine[10] == ':');
+            isHexDigit(pLine[2]) &&
+            isHexDigit(pLine[3]) &&
+            isHexDigit(pLine[4]) &&
+            isHexDigit(pLine[5]) &&
+            isHexDigit(pLine[6]) &&
+            isHexDigit(pLine[7]) &&
+            isHexDigit(pLine[8]) &&
+            isHexDigit(pLine[9]));
+}
+
+static int isHexDigit(char c)
+{
+    return ((c >= '0' && c <= '9') ||
+            (c >= 'a' && c <= 'f') ||
+            (c >= 'A' && c <= 'F'));
 }
 
 static ParseResults parseMemoryLine(const char* pLine)
