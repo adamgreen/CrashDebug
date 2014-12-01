@@ -32,6 +32,7 @@
 #define socketException                     (mriMaxException + 11)
 #define fileException                       (mriMaxException + 12)
 #define coverageException                   (mriMaxException + 13)
+#define elfFormatException                  (mriMaxException + 14)
 
 
 #ifndef __debugbreak
