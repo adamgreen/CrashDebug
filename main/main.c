@@ -32,8 +32,21 @@ int main(int argc, const char** argv)
     }
     __catch
     {
-        if (getExceptionCode() == fileException)
+        switch (getExceptionCode())
+        {
+        case fileException:
             fprintf(stderr, "Failed to open specified image/dump file.\n");
+            break;
+        case elfFormatException:
+            fprintf(stderr, "The .elf file isn't of a supported format.\n");
+            break;
+        case invalidArgumentException:
+            fprintf(stderr, "Invalid command line parameter.\n");
+            break;
+        default:
+            fprintf(stderr, "Encountered unexpected error: %d\n", getExceptionCode());
+            break;
+        }
         returnValue = -1;
     }
     StandardIComm_Uninit(pComm);
