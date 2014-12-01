@@ -16,6 +16,7 @@
 extern "C"
 {
     #include <common.h>
+    #include <ElfPriv.h>
     #include <FileFailureInject.h>
     #include <MallocFailureInject.h>
     #include <mockFileIo.h>
@@ -31,8 +32,17 @@ extern "C"
 #undef fgets
 
 
+struct ElfFile
+{
+    Elf32_Ehdr elfHeader;
+    Elf32_Phdr pgmHeader;
+    uint32_t   data[2];
+};
+
+
 static const char     g_usageString[] = "Usage:";
 static const char*    g_imageFilename = "image.bin";
+static const char*    g_elfFilename = "image.elf";
 static const char*    g_dumpFilename = "gdb.txt";
 static const uint32_t g_imageData[2] = { 0x10000004, 0x00000100 };
 static const char     g_dumpData[] =  "0x10000000:\t0x11111111\t0x22222222\t0x33333333\t0x44444444\n"
@@ -62,6 +72,7 @@ TEST_GROUP(CrashDebugCommandLine)
     CrashDebugCommandLine m_commandLine;
     int                   m_argc;
     RegisterContext       m_expectedRegisters;
+    ElfFile               m_elfFile;
     char*                 (*m_fgets)(char * str, int size, FILE * stream);
 
     void setup()
@@ -96,6 +107,7 @@ TEST_GROUP(CrashDebugCommandLine)
         CrashDebugCommandLine_Uninit(&m_commandLine);
         remove(g_imageFilename);
         remove(g_dumpFilename);
+        remove(g_elfFilename);
     }
 
     void checkRegisters()
@@ -130,9 +142,48 @@ TEST_GROUP(CrashDebugCommandLine)
         fwrite(g_imageData, 1, sizeof(g_imageData), pFile);
         fclose(pFile);
 
+        pFile = fopen(g_elfFilename, "w");
+        fwrite(&m_elfFile, 1, sizeof(m_elfFile), pFile);
+        fclose(pFile);
+
         pFile = fopen(g_dumpFilename, "w");
         fwrite(g_dumpData, 1, sizeof(g_dumpData), pFile);
         fclose(pFile);
+    }
+
+    void initElfFile()
+    {
+        ElfFile* pElfFile = &m_elfFile;
+        initElfHeader(&pElfFile->elfHeader);
+        initPgmHeader(&pElfFile->pgmHeader);
+        pElfFile->data[0] = g_imageData[0];
+        pElfFile->data[1] = g_imageData[1];
+
+    }
+
+    void initElfHeader(Elf32_Ehdr* pHeader)
+    {
+        memset(pHeader, 0x00, sizeof(*pHeader));
+        pHeader->e_ident[EI_MAG0] = ELFMAG0;
+        pHeader->e_ident[EI_MAG1] = ELFMAG1;
+        pHeader->e_ident[EI_MAG2] = ELFMAG2;
+        pHeader->e_ident[EI_MAG3] = ELFMAG3;
+        pHeader->e_ident[EI_CLASS] = ELFCLASS32;
+        pHeader->e_ident[EI_DATA] = ELFDATA2LSB;
+        pHeader->e_type = ET_EXEC;
+        pHeader->e_phoff = sizeof(Elf32_Ehdr);
+        pHeader->e_phnum = 1;
+        pHeader->e_phentsize = sizeof(Elf32_Phdr);
+    }
+
+    void initPgmHeader(Elf32_Phdr* pHeader)
+    {
+        memset(pHeader, 0x00, sizeof(*pHeader));
+        pHeader->p_type = PT_LOAD;
+        pHeader->p_flags = PF_R | PF_X;
+        pHeader->p_offset = sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr);
+        pHeader->p_filesz = 2 * sizeof(uint32_t);
+        pHeader->p_memsz = 2 * sizeof(uint32_t);
     }
 };
 
@@ -339,4 +390,99 @@ TEST(CrashDebugCommandLine, FailMemoryRegionAllocation_ShouldThrow)
     MallocFailureInject_FailAllocation(2);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
     validateExceptionThrownAndUsageStringDisplayed(outOfMemoryException);
+}
+
+TEST(CrashDebugCommandLine, ValidElfAndDumpFilenames_ValidateMemoryAndRegisters)
+{
+    addArg("--elf");
+    addArg(g_elfFilename);
+    addArg("--dump");
+    addArg(g_dumpFilename);
+    initElfFile();
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00000000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00000004));
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+}
+
+TEST(CrashDebugCommandLine, LeaveOffElfFilename_ShouldThrow)
+{
+    addArg("--dump");
+    addArg(g_dumpFilename);
+    addArg("--elf");
+    initElfFile();
+    createTestFiles();
+        __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
+    validateExceptionThrownAndUsageStringDisplayed();
+    CHECK(m_commandLine.pMemory == NULL);
+}
+
+TEST(CrashDebugCommandLine, InvalidElfSignature_ShouldThrow)
+{
+    addArg("--elf");
+    addArg(g_elfFilename);
+    addArg("--dump");
+    addArg(g_dumpFilename);
+    initElfFile();
+    m_elfFile.elfHeader.e_ident[EI_MAG0] += 1;
+    createTestFiles();
+        __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
+    validateExceptionThrownAndUsageStringDisplayed(elfFormatException);
+    CHECK(m_commandLine.pMemory == NULL);
+}
+
+TEST(CrashDebugCommandLine, ValidElfAndDumpFilenames_DifferentBaseAddress_ValidateMemoryAndRegisters)
+{
+    addArg("--elf");
+    addArg(g_elfFilename);
+    addArg("--dump");
+    addArg(g_dumpFilename);
+    initElfFile();
+    m_elfFile.pgmHeader.p_vaddr = 0x4000;
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00004000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00004004));
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
 }

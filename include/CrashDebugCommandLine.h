@@ -19,7 +19,8 @@
 
 typedef struct CrashDebugCommandLine
 {
-    const char*     pImageFilename;
+    const char*     pElfFilename;
+    const char*     pBinFilename;
     const char*     pDumpFilename;
     IMemory*        pMemory;
     RegisterContext context;
