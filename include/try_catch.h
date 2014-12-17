@@ -33,6 +33,8 @@
 #define fileException                       (mriMaxException + 12)
 #define coverageException                   (mriMaxException + 13)
 #define elfFormatException                  (mriMaxException + 14)
+#define fileFormatException                 (mriMaxException + 15)
+#define stackOverflowException              (mriMaxException + 16)
 
 
 #ifndef __debugbreak
@@ -77,7 +79,7 @@ extern int               g_exceptionCode;
         if (g_exceptionCode)
 
 #define __throw(EXCEPTION) \
-        { \
+        do { \
             setExceptionCode(EXCEPTION); \
             if (!g_pExceptionHandlers) \
             { \
@@ -89,7 +91,7 @@ extern int               g_exceptionCode;
                 longjmp(*g_pExceptionHandlers->pJumpBuffer, 1); \
                 exit(-1); \
             } \
-        }
+        } while(0)
 
 #define __rethrow __throw(getExceptionCode())
 
