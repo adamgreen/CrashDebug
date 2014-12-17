@@ -284,7 +284,7 @@ uint8_t Platform_DetermineCauseOfException(void)
 
 static uint32_t getCurrentlyExecutingExceptionNumber(void)
 {
-    return (g_pContext->R[XPSR] & 0xFF);
+    return (g_pContext->exceptionPSR & 0xFF);
 }
 
 void Platform_DisplayFaultCauseToGdbConsole(void)

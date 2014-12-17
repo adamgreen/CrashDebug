@@ -42,13 +42,13 @@ TEST(registerTests, ReadRegisters)
                            "44444444555555556666666677777777"
                            "8888888899999999aaaaaaaabbbbbbbb"
                            "ccccccccddddddddeeeeeeeefeffffff"
-                           "0c000001#+");
+                           "00000001#+");
     STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
 }
 
 TEST(registerTests, WriteRegisters)
 {
-    memset(&m_context, 0xa5, sizeof(m_context) - sizeof(uint32_t));
+    memset(&m_context, 0xa5, 16 * sizeof(uint32_t));
     mockIComm_InitReceiveChecksummedData("+$G00000000111111112222222233333333"
                                             "44444444555555556666666677777777"
                                             "8888888899999999aaaaaaaabbbbbbbb"

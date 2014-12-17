@@ -18,27 +18,29 @@
 #include <try_catch.h>
 
 /* Register names / indices into the RegisterContext::R array of registers. */
-#define R0   0
-#define R1   1
-#define R2   2
-#define R3   3
-#define R4   4
-#define R5   5
-#define R6   6
-#define R7   7
-#define R8   8
-#define R9   9
-#define R10  10
-#define R11  11
-#define R12  12
-#define SP   13
-#define LR   14
-#define PC   15
-#define XPSR 16
+#define R0              0
+#define R1              1
+#define R2              2
+#define R3              3
+#define R4              4
+#define R5              5
+#define R6              6
+#define R7              7
+#define R8              8
+#define R9              9
+#define R10             10
+#define R11             11
+#define R12             12
+#define SP              13
+#define LR              14
+#define PC              15
+#define XPSR            16
+#define TOTAL_REG_COUNT (XPSR + 1)
 
 typedef struct RegisterContext
 {
-    uint32_t R[17];
+    uint32_t R[TOTAL_REG_COUNT];
+    uint32_t exceptionPSR;
 } RegisterContext;
 
 

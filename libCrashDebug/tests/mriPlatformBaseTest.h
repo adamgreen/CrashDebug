@@ -36,10 +36,11 @@ extern "C"
 #define EPSR_T      (1 << 24)   /* Thumb mode flag */
 
 // Initial values for special registers.
-#define INITIAL_SP   0x10008000
-#define INITIAL_LR   0x00000000
-#define INITIAL_PC   0x10004000
-#define INITIAL_XPSR EPSR_T
+#define INITIAL_SP            0x10008000
+#define INITIAL_LR            0x00000000
+#define INITIAL_PC            0x10004000
+#define INITIAL_XPSR          EPSR_T
+#define INITIAL_EXCEPTION_PSR EPSR_T
 
 class mriPlatformBase : public Utest
 {
@@ -76,6 +77,7 @@ protected:
         m_context.R[LR] = INITIAL_LR;
         m_context.R[PC] = INITIAL_PC;
         m_context.R[XPSR] = INITIAL_XPSR;
+        m_context.exceptionPSR = INITIAL_EXCEPTION_PSR;
         m_emitAddress = INITIAL_PC;
 
         resetExpectedBuffer();
@@ -332,7 +334,7 @@ protected:
 
     void setIPSR(uint32_t ipsr)
     {
-        m_context.R[XPSR] = (m_context.R[XPSR] & ~IPSR_MASK) | (ipsr & IPSR_MASK);
+        m_context.exceptionPSR = (m_context.exceptionPSR & ~IPSR_MASK) | (ipsr & IPSR_MASK);
     }
 
     uint32_t byteSwap(uint32_t value)
