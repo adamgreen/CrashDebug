@@ -20,6 +20,7 @@
 
 
 __throws void CrashCatcherDump_ReadBinary(IMemory* pMem, RegisterContext* pContext, const char* pCrashDumpFilename);
+__throws void CrashCatcherDump_ReadHex(IMemory* pMem, RegisterContext* pContext, const char* pCrashDumpFilename);
 
 
 #endif /* _CRASH_CATCHER_DUMP_H_ */

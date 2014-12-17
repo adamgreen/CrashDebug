@@ -48,6 +48,9 @@ static int readNextMemoryRegion(Object* pObject);
 static int isStackOverflowSentinelInsteadOfRegionDescription(int bytesRead, const RegionOrSentinel* pSentinel);
 static void createAndLoadMemoryRegion(Object* pObject, CrashCatcherMemoryRegion* pRegion);
 static void destructObject(Object* pObject);
+static int hexRead(Object* pObject, void* pBuffer, size_t bytesToRead);
+static int readNextCharacterSkippingNewLines(Object* pObject, char* pHexDigit);
+static uint8_t nibbleDigitToVal(char hexDigit);
 
 
 __throws void CrashCatcherDump_ReadBinary(IMemory* pMem, RegisterContext* pContext, const char* pCrashDumpFilename)
@@ -172,4 +175,76 @@ static void destructObject(Object* pObject)
         fclose(pObject->pFile);
         pObject->pFile = NULL;
     }
+}
+
+
+
+__throws void CrashCatcherDump_ReadHex(IMemory* pMem, RegisterContext* pContext, const char* pCrashDumpFilename)
+{
+    Object         object;
+
+    __try
+    {
+        initObject(&object, pMem, pContext, pCrashDumpFilename, hexRead);
+        validateDumpSignature(&object);
+        readRegisters(&object);
+        readMemoryRegions(&object);
+        destructObject(&object);
+    }
+    __catch
+    {
+        destructObject(&object);
+        __rethrow;
+    }
+}
+
+static int hexRead(Object* pObject, void* pBuffer, size_t bytesToRead)
+{
+    int      bytesRead = 0;
+    uint8_t* pCurr = pBuffer;
+
+    while (bytesToRead--)
+    {
+        char hiNibble;
+        char loNibble;
+        int  result;
+
+        result = readNextCharacterSkippingNewLines(pObject, &hiNibble);
+        if (result != 1)
+            break;
+        result = readNextCharacterSkippingNewLines(pObject, &loNibble);
+        if (result != 1)
+            break;
+        *pCurr++ = (nibbleDigitToVal(hiNibble) << 4) | nibbleDigitToVal(loNibble);
+        bytesRead++;
+    }
+    return bytesRead;
+}
+
+static int readNextCharacterSkippingNewLines(Object* pObject, char* pHexDigit)
+{
+    char curr;
+    int  result;
+
+    do
+    {
+        result = fread(&curr, 1, 1, pObject->pFile);
+    } while (result == 1 && (curr == '\r' || curr == '\n'));
+
+    if (result == 1)
+        *pHexDigit = curr;
+    return result;
+}
+
+static uint8_t nibbleDigitToVal(char hexDigit)
+{
+    if (hexDigit >= '0' && hexDigit <= '9')
+        return hexDigit - '0';
+    if (hexDigit >= 'a' && hexDigit <= 'f')
+        return hexDigit - 'a' + 10;
+    if (hexDigit >= 'A' && hexDigit <= 'F')
+        return hexDigit - 'A' + 10;
+
+    __throw(fileFormatException);
+    return 0;
 }
