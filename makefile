@@ -198,10 +198,11 @@ $(eval $(call run_gcov,LIBCOMMON))
 
 #######################################
 # libCrashDebug.a
-$(eval $(call make_library,LIBCRASHDEBUG,libCrashDebug/src,libCrashDebug.a,include mri/include libCrashDebug/mocks))
+$(eval $(call make_library,LIBCRASHDEBUG,libCrashDebug/src,libCrashDebug.a,\
+                         include mri/include libCrashDebug/mocks CrashCatcher/include CrashCatcher/Core/src))
 $(eval $(call make_tests,LIBCRASHDEBUG, \
-                         libCrashDebug/tests libCrashDebug/mocks,\
-                         include mri/include libCrashDebug/mocks libCrashDebug/src, \
+                         libCrashDebug/tests libCrashDebug/mocks, \
+                         include mri/include libCrashDebug/mocks libCrashDebug/src CrashCatcher/include CrashCatcher/Core/src, \
                          $(HOST_LIBCOMMON_LIB) \
                          $(HOST_LIBMOCKS_LIB) \
                          $(HOST_LIBMRICORE_LIB)))
