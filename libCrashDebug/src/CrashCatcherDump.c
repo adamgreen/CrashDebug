@@ -25,34 +25,66 @@ typedef union
     uint32_t                 sentinel;
 } RegionOrSentinel;
 
+typedef struct Object
+{
+    int              (*read)(struct Object* pObject, void* pBuffer, size_t bytesToRead);
+    IMemory*         pMem;
+    RegisterContext* pContext;
+    FILE*            pFile;
+} Object;
 
+
+static int binaryRead(Object* pObject, void* pBuffer, size_t bytesToRead);
+static void initObject(Object* pObject,
+                       IMemory* pMem,
+                       RegisterContext* pContext,
+                       const char* pCrashDumpFilename,
+                       int (*read)(struct Object*, void*, size_t));
 static FILE* openFileAndThrowOnError(const char* pLogFilename);
-static void validateDumpSignature(FILE* pFile);
-static void readRegisters(RegisterContext* pContext, FILE* pFile);
-static void readMemoryRegions(IMemory* pMem, FILE* pFile);
-static int readNextMemoryRegion(IMemory* pMem, FILE* pFile);
+static void validateDumpSignature(Object* pObject);
+static void readRegisters(Object* pObject);
+static void readMemoryRegions(Object* pObject);
+static int readNextMemoryRegion(Object* pObject);
 static int isStackOverflowSentinelInsteadOfRegionDescription(int bytesRead, const RegionOrSentinel* pSentinel);
-static void createAndLoadMemoryRegion(IMemory* pMem, FILE* pFile, CrashCatcherMemoryRegion* pRegion);
+static void createAndLoadMemoryRegion(Object* pObject, CrashCatcherMemoryRegion* pRegion);
+static void destructObject(Object* pObject);
 
 
 __throws void CrashCatcherDump_ReadBinary(IMemory* pMem, RegisterContext* pContext, const char* pCrashDumpFilename)
 {
-    FILE* volatile pFile = NULL;
+    Object         object;
 
     __try
     {
-        pFile = openFileAndThrowOnError(pCrashDumpFilename);
-        validateDumpSignature(pFile);
-        readRegisters(pContext, pFile);
-        readMemoryRegions(pMem, pFile);
-        fclose(pFile);
+        initObject(&object, pMem, pContext, pCrashDumpFilename, binaryRead);
+        validateDumpSignature(&object);
+        readRegisters(&object);
+        readMemoryRegions(&object);
+        destructObject(&object);
     }
     __catch
     {
-        if (pFile != NULL);
-            fclose(pFile);
+        destructObject(&object);
         __rethrow;
     }
+}
+
+static int binaryRead(Object* pObject, void* pBuffer, size_t bytesToRead)
+{
+    return fread(pBuffer, 1, bytesToRead, pObject->pFile);
+}
+
+static void initObject(Object* pObject,
+                       IMemory* pMem,
+                       RegisterContext* pContext,
+                       const char* pCrashDumpFilename,
+                       int (*read)(struct Object*, void*, size_t))
+{
+    memset(pObject, 0, sizeof(*pObject));
+    pObject->read = read;
+    pObject->pMem = pMem;
+    pObject->pContext = pContext;
+    pObject->pFile = openFileAndThrowOnError(pCrashDumpFilename);
 }
 
 static FILE* openFileAndThrowOnError(const char* pLogFilename)
@@ -63,7 +95,7 @@ static FILE* openFileAndThrowOnError(const char* pLogFilename)
     return pLogFile;
 }
 
-static void validateDumpSignature(FILE* pFile)
+static void validateDumpSignature(Object* pObject)
 {
     static const uint8_t expectedSignature[4] = {CRASH_CATCHER_SIGNATURE_BYTE0,
                                                  CRASH_CATCHER_SIGNATURE_BYTE1,
@@ -72,36 +104,36 @@ static void validateDumpSignature(FILE* pFile)
     uint8_t              actualSignature[4];
     int                  result = -1;
 
-    result = fread(actualSignature, 1, sizeof(actualSignature), pFile);
+    result = pObject->read(pObject, actualSignature, sizeof(actualSignature));
     if (result == -1)
         __throw(fileFormatException);
     if (0 != memcmp(actualSignature, expectedSignature, sizeof(actualSignature)))
         __throw(fileFormatException);
 }
 
-static void readRegisters(RegisterContext* pContext, FILE* pFile)
+static void readRegisters(Object* pObject)
 {
-    int result = fread(pContext, 1, sizeof(*pContext), pFile);
-    if (result != sizeof(*pContext))
+    int result = pObject->read(pObject, pObject->pContext, sizeof(*pObject->pContext));
+    if (result != sizeof(*pObject->pContext))
         __throw(fileFormatException);
 }
 
-static void readMemoryRegions(IMemory* pMem, FILE* pFile)
+static void readMemoryRegions(Object* pObject)
 {
     int eof = FALSE;
 
     do
     {
-        eof = readNextMemoryRegion(pMem, pFile);
+        eof = readNextMemoryRegion(pObject);
     } while (!eof);
 }
 
-static int readNextMemoryRegion(IMemory* pMem, FILE* pFile)
+static int readNextMemoryRegion(Object* pObject)
 {
     int              bytesRead;
     RegionOrSentinel regionOrSentinel;
 
-    bytesRead = fread(&regionOrSentinel, 1, sizeof(regionOrSentinel), pFile);
+    bytesRead = pObject->read(pObject, &regionOrSentinel, sizeof(regionOrSentinel));
     if (isStackOverflowSentinelInsteadOfRegionDescription(bytesRead, &regionOrSentinel))
         __throw(stackOverflowException);
     else if (bytesRead == 0)
@@ -109,7 +141,7 @@ static int readNextMemoryRegion(IMemory* pMem, FILE* pFile)
     else if (bytesRead != sizeof(regionOrSentinel.region))
         __throw(fileFormatException);
 
-    createAndLoadMemoryRegion(pMem, pFile, &regionOrSentinel.region);
+    createAndLoadMemoryRegion(pObject, &regionOrSentinel.region);
     return FALSE;
 }
 
@@ -118,18 +150,26 @@ static int isStackOverflowSentinelInsteadOfRegionDescription(int bytesRead, cons
     return (bytesRead == sizeof(pSentinel->sentinel) && pSentinel->sentinel == STACK_SENTINEL);
 }
 
-static void createAndLoadMemoryRegion(IMemory* pMem, FILE* pFile, CrashCatcherMemoryRegion* pRegion)
+static void createAndLoadMemoryRegion(Object* pObject, CrashCatcherMemoryRegion* pRegion)
 {
     uint32_t bytesInRegion = pRegion->endAddress - pRegion->startAddress;
     uint32_t address = pRegion->startAddress;
-    MemorySim_CreateRegion(pMem, pRegion->startAddress, bytesInRegion);
+    MemorySim_CreateRegion(pObject->pMem, pRegion->startAddress, bytesInRegion);
     for (uint32_t i = 0 ; i < bytesInRegion ; i++)
     {
         uint8_t byte;
-        int bytesRead = fread(&byte, 1, 1, pFile);
+        int bytesRead = pObject->read(pObject, &byte, 1);
         if (bytesRead != 1)
             __throw(fileFormatException);
-        IMemory_Write8(pMem, address++, byte);
+        IMemory_Write8(pObject->pMem, address++, byte);
     }
 }
 
+static void destructObject(Object* pObject)
+{
+    if (pObject && pObject->pFile)
+    {
+        fclose(pObject->pFile);
+        pObject->pFile = NULL;
+    }
+}
