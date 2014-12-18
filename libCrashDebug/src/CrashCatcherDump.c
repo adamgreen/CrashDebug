@@ -13,7 +13,6 @@
 #include <common.h>
 #include <CrashCatcher.h>
 #include <CrashCatcherDump.h>
-#include <CrashCatcherPriv.h>
 #include <FileFailureInject.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,8 +20,8 @@
 
 typedef union
 {
-    CrashCatcherMemoryRegion region;
-    uint32_t                 sentinel;
+    CrashCatcherMemoryRegionInfo region;
+    uint32_t                     sentinel;
 } RegionOrSentinel;
 
 typedef struct Object
@@ -46,7 +45,7 @@ static void readRegisters(Object* pObject);
 static void readMemoryRegions(Object* pObject);
 static int readNextMemoryRegion(Object* pObject);
 static int isStackOverflowSentinelInsteadOfRegionDescription(int bytesRead, const RegionOrSentinel* pSentinel);
-static void createAndLoadMemoryRegion(Object* pObject, CrashCatcherMemoryRegion* pRegion);
+static void createAndLoadMemoryRegion(Object* pObject, CrashCatcherMemoryRegionInfo* pRegion);
 static void destructObject(Object* pObject);
 static int hexRead(Object* pObject, void* pBuffer, size_t bytesToRead);
 static int readNextCharacterSkippingNewLines(Object* pObject, char* pHexDigit);
@@ -153,7 +152,7 @@ static int isStackOverflowSentinelInsteadOfRegionDescription(int bytesRead, cons
     return (bytesRead == sizeof(pSentinel->sentinel) && pSentinel->sentinel == STACK_SENTINEL);
 }
 
-static void createAndLoadMemoryRegion(Object* pObject, CrashCatcherMemoryRegion* pRegion)
+static void createAndLoadMemoryRegion(Object* pObject, CrashCatcherMemoryRegionInfo* pRegion)
 {
     uint32_t bytesInRegion = pRegion->endAddress - pRegion->startAddress;
     uint32_t address = pRegion->startAddress;

@@ -17,7 +17,6 @@ extern "C"
     #include <common.h>
     #include <CrashCatcherDump.h>
     #include <CrashCatcher.h>
-    #include <CrashCatcherPriv.h>
     #include <FileFailureInject.h>
     #include <MallocFailureInject.h>
 }
@@ -172,14 +171,13 @@ TEST(CrashCatcherBinaryDump, DumpContainingOneMemoryRegionOf1Word_VerifyMemoryCo
 {
     struct FileData
     {
-        DumpFileTop              fileTop;
-        CrashCatcherMemoryRegion region1;
-        uint32_t                 region1Data[1];
+        DumpFileTop                  fileTop;
+        CrashCatcherMemoryRegionInfo region1;
+        uint32_t                     region1Data[1];
     } fileData;
     memcpy(&fileData.fileTop, &m_fileTop, sizeof(m_fileTop));
     fileData.region1.startAddress = 0x10000000;
     fileData.region1.endAddress = 0x10000004;
-    fileData.region1.elementSize = CRASH_CATCHER_BYTE;
     fileData.region1Data[0] = 0x11111111;
     createTestDumpFile(&fileData, sizeof(fileData));
         CrashCatcherDump_ReadBinary(m_pMem, &m_actualRegisters, g_testFilename);
@@ -197,14 +195,13 @@ TEST(CrashCatcherBinaryDump, FailAllocationForRegion_VerifyEmptyMemoryAndExcepti
 {
     struct FileData
     {
-        DumpFileTop              fileTop;
-        CrashCatcherMemoryRegion region1;
-        uint32_t                 region1Data[1];
+        DumpFileTop                  fileTop;
+        CrashCatcherMemoryRegionInfo region1;
+        uint32_t                     region1Data[1];
     } fileData;
     memcpy(&fileData.fileTop, &m_fileTop, sizeof(m_fileTop));
     fileData.region1.startAddress = 0x10000000;
     fileData.region1.endAddress = 0x10000004;
-    fileData.region1.elementSize = CRASH_CATCHER_BYTE;
     fileData.region1Data[0] = 0x11111111;
     createTestDumpFile(&fileData, sizeof(fileData));
     MallocFailureInject_FailAllocation(1);
@@ -218,14 +215,13 @@ TEST(CrashCatcherBinaryDump, DumpContainingTruncatedMemoryRegionDescription_Exce
 {
     struct FileData
     {
-        DumpFileTop              fileTop;
-        CrashCatcherMemoryRegion region1;
-        uint32_t                 region1Data[1];
+        DumpFileTop                  fileTop;
+        CrashCatcherMemoryRegionInfo region1;
+        uint32_t                     region1Data[1];
     } fileData;
     memcpy(&fileData.fileTop, &m_fileTop, sizeof(m_fileTop));
     fileData.region1.startAddress = 0x10000000;
     fileData.region1.endAddress = 0x10000004;
-    fileData.region1.elementSize = CRASH_CATCHER_BYTE;
     fileData.region1Data[0] = 0x11111111;
     createTestDumpFile(&fileData, sizeof(fileData) - sizeof(uint32_t) - 1);
         __try_and_catch( CrashCatcherDump_ReadBinary(m_pMem, &m_actualRegisters, g_testFilename) );
@@ -238,14 +234,13 @@ TEST(CrashCatcherBinaryDump, DumpContainingTruncatedMemoryRegionData_ExceptionSh
 {
     struct FileData
     {
-        DumpFileTop              fileTop;
-        CrashCatcherMemoryRegion region1;
-        uint32_t                 region1Data[1];
+        DumpFileTop                  fileTop;
+        CrashCatcherMemoryRegionInfo region1;
+        uint32_t                     region1Data[1];
     } fileData;
     memcpy(&fileData.fileTop, &m_fileTop, sizeof(m_fileTop));
     fileData.region1.startAddress = 0x10000000;
     fileData.region1.endAddress = 0x10000004;
-    fileData.region1.elementSize = CRASH_CATCHER_BYTE;
     fileData.region1Data[0] = 0x11111111;
     createTestDumpFile(&fileData, sizeof(fileData) - 1);
         __try_and_catch( CrashCatcherDump_ReadBinary(m_pMem, &m_actualRegisters, g_testFilename) );
@@ -265,20 +260,18 @@ TEST(CrashCatcherBinaryDump, DumpContainingTwoMemoryRegionsOf1Word_VerifyMemoryC
 {
     struct FileData
     {
-        DumpFileTop              fileTop;
-        CrashCatcherMemoryRegion region1;
-        uint32_t                 region1Data[1];
-        CrashCatcherMemoryRegion region2;
-        uint32_t                 region2Data[1];
+        DumpFileTop                  fileTop;
+        CrashCatcherMemoryRegionInfo region1;
+        uint32_t                     region1Data[1];
+        CrashCatcherMemoryRegionInfo region2;
+        uint32_t                     region2Data[1];
     } fileData;
     memcpy(&fileData.fileTop, &m_fileTop, sizeof(m_fileTop));
     fileData.region1.startAddress = 0x10000000;
     fileData.region1.endAddress = 0x10000004;
-    fileData.region1.elementSize = CRASH_CATCHER_BYTE;
     fileData.region1Data[0] = 0x11111111;
     fileData.region2.startAddress = 0x20000000;
     fileData.region2.endAddress = 0x20000004;
-    fileData.region2.elementSize = CRASH_CATCHER_BYTE;
     fileData.region2Data[0] = 0x22222222;
     createTestDumpFile(&fileData, sizeof(fileData));
         CrashCatcherDump_ReadBinary(m_pMem, &m_actualRegisters, g_testFilename);
@@ -298,15 +291,14 @@ TEST(CrashCatcherBinaryDump, DumpContainingOneMemoryRegionsFollowedByStackOverfl
 {
     struct FileData
     {
-        DumpFileTop              fileTop;
-        CrashCatcherMemoryRegion region1;
-        uint32_t                 region1Data[1];
-        uint32_t                 overflowSentinel;
+        DumpFileTop                  fileTop;
+        CrashCatcherMemoryRegionInfo region1;
+        uint32_t                     region1Data[1];
+        uint32_t                     overflowSentinel;
     } fileData;
     memcpy(&fileData.fileTop, &m_fileTop, sizeof(m_fileTop));
     fileData.region1.startAddress = 0x10000000;
     fileData.region1.endAddress = 0x10000004;
-    fileData.region1.elementSize = CRASH_CATCHER_BYTE;
     fileData.region1Data[0] = 0x11111111;
     fileData.overflowSentinel = STACK_SENTINEL;
     createTestDumpFile(&fileData, sizeof(fileData));
