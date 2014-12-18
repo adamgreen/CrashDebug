@@ -11,6 +11,8 @@
     GNU General Public License for more details.
 */
 #include <common.h>
+#include <CrashCatcher.h>
+#include <CrashCatcherDump.h>
 #include <CrashDebugCommandLine.h>
 #include <ElfLoad.h>
 #include <FileFailureInject.h>
@@ -59,6 +61,13 @@ typedef struct FileData
     long  dataSize;
 } FileData;
 
+typedef enum
+{
+    GDB_LOG,
+    CRASH_CATCHER_BIN,
+    CRASH_CATCHER_HEX,
+} DumpFileType;
+
 
 static int parseArgument(CrashDebugCommandLine* pThis, int index, int argc, const char** ppArgs);
 static int hasDoubleDashPrefix(const char* pArgument);
@@ -70,6 +79,13 @@ static void throwIfRequiredArgumentNotSpecified(CrashDebugCommandLine* pThis);
 static void loadImageFile(CrashDebugCommandLine* pThis);
 static FileData loadFileData(const char* pFilename);
 static void loadBinFile(CrashDebugCommandLine* pThis, volatile FileData* pFileData);
+static void loadDumpFile(CrashDebugCommandLine* pThis);
+static DumpFileType getFileType(const char* pDumpFilename);
+static int hasBinaryCrashCatcherSignature(const uint8_t* pHeader);
+static int hasHexCrashCatcherSignature(const uint8_t* pHeader);
+static uint8_t hiNibbleDigit(uint8_t byte);
+static uint8_t loNibbleDigit(uint8_t byte);
+static uint8_t nibbleDigit(uint8_t byte);
 
 
 __throws void CrashDebugCommandLine_Init(CrashDebugCommandLine* pThis, int argc, const char** argv)
@@ -89,7 +105,7 @@ __throws void CrashDebugCommandLine_Init(CrashDebugCommandLine* pThis, int argc,
         throwIfRequiredArgumentNotSpecified(pThis);
         pThis->pMemory = MemorySim_Init();
         loadImageFile(pThis);
-        GdbLogParse(pThis->pMemory, &pThis->context, pThis->pDumpFilename);
+        loadDumpFile(pThis);
     }
     __catch
     {
@@ -229,6 +245,69 @@ static void loadBinFile(CrashDebugCommandLine* pThis, volatile FileData* pFileDa
     MemorySim_CreateRegion(pThis->pMemory, pThis->baseAddress, pFileData->dataSize);
     MemorySim_LoadFromFlashImage(pThis->pMemory, pThis->baseAddress, pFileData->pData, pFileData->dataSize);
     MemorySim_MakeRegionReadOnly(pThis->pMemory, pThis->baseAddress);
+}
+
+static void loadDumpFile(CrashDebugCommandLine* pThis)
+{
+    switch(getFileType(pThis->pDumpFilename))
+    {
+    case GDB_LOG:
+        GdbLogParse(pThis->pMemory, &pThis->context, pThis->pDumpFilename);
+        break;
+    case CRASH_CATCHER_HEX:
+        CrashCatcherDump_ReadHex(pThis->pMemory, &pThis->context, pThis->pDumpFilename);
+        break;
+    case CRASH_CATCHER_BIN:
+        CrashCatcherDump_ReadBinary(pThis->pMemory, &pThis->context, pThis->pDumpFilename);
+        break;
+    }
+}
+
+static DumpFileType getFileType(const char* pDumpFilename)
+{
+    uint8_t fileHeader[4] = { 0, 0, 0, 0 };
+
+    FILE*   pFile = fopen(pDumpFilename, "r");
+    if (!pFile)
+        __throw(fileException);
+    fread(fileHeader, 1, sizeof(fileHeader), pFile);
+    fclose(pFile);
+
+    if (hasBinaryCrashCatcherSignature(fileHeader))
+        return CRASH_CATCHER_BIN;
+    else if (hasHexCrashCatcherSignature(fileHeader))
+        return CRASH_CATCHER_HEX;
+    else
+        return GDB_LOG;
+}
+
+static int hasBinaryCrashCatcherSignature(const uint8_t* pHeader)
+{
+    return (pHeader[0] == CRASH_CATCHER_SIGNATURE_BYTE0 && pHeader[1] == CRASH_CATCHER_SIGNATURE_BYTE1);
+}
+
+static int hasHexCrashCatcherSignature(const uint8_t* pHeader)
+{
+    return (pHeader[0] == hiNibbleDigit(CRASH_CATCHER_SIGNATURE_BYTE0) &&
+            pHeader[1] == loNibbleDigit(CRASH_CATCHER_SIGNATURE_BYTE0) &&
+            pHeader[2] == hiNibbleDigit(CRASH_CATCHER_SIGNATURE_BYTE1) &&
+            pHeader[3] == loNibbleDigit(CRASH_CATCHER_SIGNATURE_BYTE1));
+}
+
+static uint8_t hiNibbleDigit(uint8_t byte)
+{
+    return nibbleDigit(byte >> 4);
+}
+
+static uint8_t loNibbleDigit(uint8_t byte)
+{
+    return nibbleDigit(byte & 0xF);
+}
+
+static uint8_t nibbleDigit(uint8_t byte)
+{
+    static const uint8_t nibbleToHexDigit[] = "0123456789ABCDEF";
+    return nibbleToHexDigit[byte];
 }
 
 
