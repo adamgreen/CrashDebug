@@ -21,6 +21,8 @@ extern "C"
     #include <MallocFailureInject.h>
 }
 
+#include <string.h>
+
 // Include C++ headers for test harness.
 #include "CppUTest/TestHarness.h"
 

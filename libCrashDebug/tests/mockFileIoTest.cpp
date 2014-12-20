@@ -17,6 +17,7 @@ extern "C"
     #include <mockFileIo.h>
 }
 #include <common.h>
+#include <string.h>
 
 // Include C++ headers for test harness.
 #include "CppUTest/TestHarness.h"
@@ -345,14 +346,14 @@ TEST(mockFileIo, SetPOpenCallResult_ReturnNull)
 {
     mockFileIo_SetPOpenCallResult(NULL);
     FILE* pResult = popen("foo", "r");
-    CHECK_EQUAL(NULL, pResult);
+    POINTERS_EQUAL(NULL, pResult);
 }
 
 TEST(mockFileIo, SetPOpenCallResult_ReturnSuccessfulResult)
 {
     mockFileIo_SetPOpenCallResult((FILE*)1);
     FILE* pResult = popen("foo", "r");
-    CHECK_EQUAL((FILE*)1, pResult);
+    POINTERS_EQUAL((FILE*)1, pResult);
 }
 
 TEST(mockFileIo, PCloseCall_InvalidFilePointer_CallIgnored)
@@ -380,7 +381,7 @@ TEST(mockFileIo, CallFgetsOnInvalidPointerWithNoTestData_ShouldReturnNull)
 {
     char buffer[2];
     char* pResult = fgets(buffer, sizeof(buffer), NULL);
-    CHECK_EQUAL(NULL, pResult);
+    POINTERS_EQUAL(NULL, pResult);
 }
 
 TEST(mockFileIo, SetFgetsData_OneLine)
@@ -392,7 +393,7 @@ TEST(mockFileIo, SetFgetsData_OneLine)
     CHECK_EQUAL(buffer, pResult);
     STRCMP_EQUAL(ppTestData[0], buffer);
         pResult = fgets(buffer, sizeof(buffer), NULL);
-    CHECK_EQUAL(NULL, pResult);
+    POINTERS_EQUAL(NULL, pResult);
 }
 
 TEST(mockFileIo, SetFgetsData_TwoLines)
@@ -407,7 +408,7 @@ TEST(mockFileIo, SetFgetsData_TwoLines)
     CHECK_EQUAL(buffer, pResult);
     STRCMP_EQUAL(ppTestData[1], buffer);
         pResult = fgets(buffer, sizeof(buffer), NULL);
-    CHECK_EQUAL(NULL, pResult);
+    POINTERS_EQUAL(NULL, pResult);
 }
 
 TEST(mockFileIo, SetFgetsData_OneLine_MakeSureThatDataRewindsAfterEOF)
@@ -419,7 +420,7 @@ TEST(mockFileIo, SetFgetsData_OneLine_MakeSureThatDataRewindsAfterEOF)
     CHECK_EQUAL(buffer, pResult);
     STRCMP_EQUAL(ppTestData[0], buffer);
         pResult = fgets(buffer, sizeof(buffer), NULL);
-    CHECK_EQUAL(NULL, pResult);
+    POINTERS_EQUAL(NULL, pResult);
         pResult = fgets(buffer, sizeof(buffer), NULL);
     CHECK_EQUAL(buffer, pResult);
     STRCMP_EQUAL(ppTestData[0], buffer);

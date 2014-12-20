@@ -14,6 +14,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <sys/stat.h>
 
 static int     mock_open(const char *path, int oflag, ...);
@@ -150,7 +151,7 @@ static ssize_t mock_write(int fildes, const void *buf, size_t nbyte)
         break;
     }
 
-    nbyte = nbyte > (size_t)bytesLeft ? bytesLeft : nbyte;
+    nbyte = nbyte > (size_t)bytesLeft ? (size_t)bytesLeft : nbyte;
     memcpy(pBuffer, buf, nbyte);
     (*ppCurr) += nbyte;
     return nbyte;

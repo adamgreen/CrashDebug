@@ -13,6 +13,7 @@
 #ifndef _IMEMORY_H_
 #define _IMEMORY_H_
 
+#include <stdint.h>
 #include <try_catch.h>
 
 

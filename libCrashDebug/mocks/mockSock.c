@@ -12,6 +12,7 @@
 */
 #include <assert.h>
 #include <common.h>
+#include <stdint.h>
 #include <string.h>
 #include "mockSock.h"
 

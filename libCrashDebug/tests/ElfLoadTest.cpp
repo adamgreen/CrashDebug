@@ -16,8 +16,10 @@ extern "C"
 {
     #include <ElfLoad.h>
     #include <ElfPriv.h>
-    #include <Memorysim.h>
+    #include <MemorySim.h>
 }
+
+#include <string.h>
 
 // Include C++ headers for test harness.
 #include <CppUTest/TestHarness.h>

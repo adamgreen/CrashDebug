@@ -155,7 +155,7 @@ uint32_t Platform_MemRead32(const void* pv)
 {
     uint32_t retVal = 0;
     __try
-        retVal = IMemory_Read32(g_pMemory, (uint32_t)pv);
+        retVal = IMemory_Read32(g_pMemory, (uint32_t)(unsigned long)pv);
     __catch
         g_memoryFaultEncountered++;
     return retVal;
@@ -165,7 +165,7 @@ uint16_t Platform_MemRead16(const void* pv)
 {
     uint16_t retVal = 0;
     __try
-        retVal = IMemory_Read16(g_pMemory, (uint32_t)pv);
+        retVal = IMemory_Read16(g_pMemory, (uint32_t)(unsigned long)pv);
     __catch
         g_memoryFaultEncountered++;
     return retVal;
@@ -175,7 +175,7 @@ uint8_t Platform_MemRead8(const void* pv)
 {
     uint8_t retVal = 0;
     __try
-        retVal = IMemory_Read8(g_pMemory, (uint32_t)pv);
+        retVal = IMemory_Read8(g_pMemory, (uint32_t)(unsigned long)pv);
     __catch
         g_memoryFaultEncountered++;
     return retVal;
@@ -184,7 +184,7 @@ uint8_t Platform_MemRead8(const void* pv)
 void Platform_MemWrite32(void* pv, uint32_t value)
 {
     __try
-        IMemory_Write32(g_pMemory, (uint32_t)pv, value);
+        IMemory_Write32(g_pMemory, (uint32_t)(unsigned long)pv, value);
     __catch
         g_memoryFaultEncountered++;
 }
@@ -192,7 +192,7 @@ void Platform_MemWrite32(void* pv, uint32_t value)
 void Platform_MemWrite16(void* pv, uint16_t value)
 {
     __try
-        IMemory_Write16(g_pMemory, (uint32_t)pv, value);
+        IMemory_Write16(g_pMemory, (uint32_t)(unsigned long)pv, value);
     __catch
         g_memoryFaultEncountered++;
 }
@@ -200,7 +200,7 @@ void Platform_MemWrite16(void* pv, uint16_t value)
 void Platform_MemWrite8(void* pv, uint8_t value)
 {
     __try
-        IMemory_Write8(g_pMemory, (uint32_t)pv, value);
+        IMemory_Write8(g_pMemory, (uint32_t)(unsigned long)pv, value);
     __catch
         g_memoryFaultEncountered++;
 }
@@ -352,7 +352,7 @@ static void displayMemFaultCauseToGdbConsole(void)
     static const uint32_t unstackingErrorBit = 1 << 3;
     static const uint32_t dataAccess = 1 << 1;
     static const uint32_t instructionFetch = 1;
-    uint32_t              memManageFaultStatusRegister = 0;
+    uint32_t volatile     memManageFaultStatusRegister = 0;
 
     /* Check to make sure that there is a memory fault to display. */
     __try
@@ -399,7 +399,7 @@ static void displayBusFaultCauseToGdbConsole(void)
     static const uint32_t impreciseDataAccessBit = 1 << 2;
     static const uint32_t preciseDataAccessBit = 1 << 1;
     static const uint32_t instructionPrefetch = 1;
-    uint32_t              busFaultStatusRegister = 0;
+    uint32_t volatile     busFaultStatusRegister = 0;
 
     __try
         busFaultStatusRegister = (IMemory_Read32(g_pMemory, CFSR) >> 8) & 0xFF;

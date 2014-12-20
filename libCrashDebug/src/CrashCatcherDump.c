@@ -156,8 +156,10 @@ static void createAndLoadMemoryRegion(Object* pObject, CrashCatcherMemoryRegionI
 {
     uint32_t bytesInRegion = pRegion->endAddress - pRegion->startAddress;
     uint32_t address = pRegion->startAddress;
+    uint32_t i;
+
     MemorySim_CreateRegion(pObject->pMem, pRegion->startAddress, bytesInRegion);
-    for (uint32_t i = 0 ; i < bytesInRegion ; i++)
+    for (i = 0 ; i < bytesInRegion ; i++)
     {
         uint8_t byte;
         int bytesRead = pObject->read(pObject, &byte, 1);

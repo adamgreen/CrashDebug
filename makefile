@@ -147,13 +147,13 @@ define make_tests # ,LIB2TEST,test_src_dirs,includes,other_libs
     .PHONY : RUN_$1_TESTS GCOV_RUN_$1_TESTS
     RUN_$1_TESTS : $$(HOST_$1_TESTS_EXE)
 		@echo Runnning $$^
-		$Q $$^
+		$Q ./$$^
     $$(GCOV_HOST_$1_TESTS_EXE) : $$(GCOV_HOST_$1_TESTS_OBJ) $(GCOV_HOST_$1_LIB) $(GCOV_HOST_CPPUTEST_LIB) $4
 		$$(call gcov_link_exe,HOST)
     GCOV_RUN_$1_TESTS : $$(GCOV_HOST_$1_TESTS_EXE)
 		@echo Runnning $$^
 		$Q $(REMOVE) $(call obj_to_gcda,$(GCOV_HOST_$1_OBJ)) $(QUIET)
-		$Q $$^
+		$Q ./$$^
 endef
 define make_app # ,APP2BUILD,app_src_dirs,includes,other_libs
     HOST_$1_APP_OBJ        := $(foreach i,$2,$(call host_objs,$i))
@@ -210,11 +210,10 @@ $(eval $(call run_gcov,LIBCRASHDEBUG))
 
 #######################################
 # CrashDebug Executable
-$(eval $(call make_app,CrashDebug,main,include,$(HOST_LIBCOMMON_LIB) \
+$(eval $(call make_app,CrashDebug,main,include,$(HOST_LIBCRASHDEBUG_LIB) \
                                                $(HOST_LIBMRICORE_LIB) \
                                                $(HOST_LIBMEMSIM_LIB) \
-                                               $(HOST_LIBCRASHDEBUG_LIB) \
-                                               ))
+                                               $(HOST_LIBCOMMON_LIB)))
 
 
 

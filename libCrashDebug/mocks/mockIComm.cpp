@@ -15,6 +15,7 @@ extern "C"
 #include <common.h>
 }
 #include <assert.h>
+#include <string.h>
 #include "mockIComm.h"
 
 
@@ -226,7 +227,7 @@ static size_t countPoundSigns(const char* p)
 
 static void copyChecksummedData(char* pDest, const char* pSrc)
 {
-    char checksum;
+    char checksum = 0;
 
     while (*pSrc)
     {

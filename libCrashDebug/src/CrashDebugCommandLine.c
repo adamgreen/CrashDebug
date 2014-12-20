@@ -88,7 +88,7 @@ static uint8_t loNibbleDigit(uint8_t byte);
 static uint8_t nibbleDigit(uint8_t byte);
 
 
-__throws void CrashDebugCommandLine_Init(CrashDebugCommandLine* pThis, int argc, const char** argv)
+__throws void CrashDebugCommandLine_Init(CrashDebugCommandLine* pThis, int volatile argc, const char** volatile argv)
 {
     __try
     {

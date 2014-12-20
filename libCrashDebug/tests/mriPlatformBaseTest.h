@@ -22,6 +22,7 @@ extern "C"
 
 // Include standard headers.
 #include <assert.h>
+#include <string.h>
 
 // Include C++ headers for test harness.
 #include "CppUTest/TestHarness.h"

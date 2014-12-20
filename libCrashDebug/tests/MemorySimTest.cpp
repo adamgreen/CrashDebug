@@ -77,7 +77,7 @@ TEST(MemorySim, ShouldThrowIfOutOfMemory)
     // 1. The MemoryRegion structure which describes the region.
     // 2. The array of bytes used to simulate the memory.
     static const size_t allocationsToFail = 2;
-    size_t i;
+    size_t volatile     i;
 
     for (i = 1 ; i <= allocationsToFail ; i++)
     {
@@ -336,7 +336,7 @@ TEST(MemorySim, CreateRegionsFromFlashImage_ShouldThrowIfOutOfMemory)
     // This API creates two regions (FLASH and RAM) so there are a total of 3 + 2 = 5 allocations.
     static const size_t allocationsToFail = 5;
     uint32_t            flashBinary[2] = { 0x10000004, 0x00000200 };
-    size_t              i;
+    size_t volatile     i;
 
     for (i = 1 ; i <= allocationsToFail ; i++)
     {
@@ -360,7 +360,7 @@ TEST(MemorySim, CreateRegionsFromFlashImage_MakeSureItHandlesOutOfMemoryWhenTher
     // This API creates two regions (FLASH and RAM) so there are a total of 3 + 2 = 5 allocations.
     static const size_t allocationsToFail = 5;
     uint32_t            flashBinary[2] = { 0x10000004, 0x00000200 };
-    size_t              i;
+    size_t volatile     i;
 
     for (i = 1 ; i <= allocationsToFail ; i++)
     {

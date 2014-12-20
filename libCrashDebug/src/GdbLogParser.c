@@ -140,9 +140,10 @@ static void firstPassMemoryHandler(ParseObject* pObject, const ParseResults* pPa
 
 static void secondPassHandler(ParseObject* pObject, const ParseResults* pParseResults)
 {
+    uint32_t i;
     if (pParseResults->type != TYPE_MEMORY)
         return;
-    for (uint32_t i = 0 ; i < pParseResults->valueCount ; i++)
+    for (i = 0 ; i < pParseResults->valueCount ; i++)
         IMemory_Write32(pObject->pMem, pParseResults->address + i * sizeof(uint32_t), pParseResults->values[i]);
 }
 
@@ -279,6 +280,7 @@ static const char* parseValue(ParseResults* pResults, const char* pLine)
 
 static int isRegisterLine(const char* pLine, size_t* pRegisterIndex)
 {
+    size_t i;
     struct
     {
         const char* pName;
@@ -304,7 +306,7 @@ static int isRegisterLine(const char* pLine, size_t* pRegisterIndex)
         { "xpsr           ", XPSR }
     };
 
-    for (size_t i = 0 ; i < ARRAY_SIZE(registers) ; i++)
+    for (i = 0 ; i < ARRAY_SIZE(registers) ; i++)
     {
         if (0 == strncmp(registers[i].pName, pLine, 15))
         {
