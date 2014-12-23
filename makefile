@@ -94,17 +94,17 @@ obj_to_gcda = $(patsubst %.o,%.gcda,$1)
 includes = $(patsubst %,-I%,$1)
 define build_lib
 	@echo Building $@
-	$Q $(MAKEDIR)
+	$Q $(MAKEDIR) $(QUIET)
 	$Q $($1_AR) -rc $@ $?
 endef
 define link_exe
 	@echo Building $@
-	$Q $(MAKEDIR)
+	$Q $(MAKEDIR) $(QUIET)
 	$Q $($1_LD) $($1_LDFLAGS) $^ -o $@
 endef
 define gcov_link_exe
 	@echo Building $@
-	$Q $(MAKEDIR)
+	$Q $(MAKEDIR) $(QUIET)
 	$Q $($1_LD) $(GCOV_$1_LDFLAGS) $^ -o $@
 endef
 define run_gcov
@@ -112,7 +112,7 @@ define run_gcov
     .PHONY : GCOV_$1
     GCOV_$1 : GCOV_RUN_$1_TESTS
 		$Q $(REMOVE) $1_output.txt $(QUIET)
-		$Q mkdir -p gcov/$1_tests $(QUIET)
+		$Q $(MAKEDIR) -p gcov/$1_tests $(QUIET)
 		$Q $(foreach i,$(GCOV_HOST_$1_OBJ),gcov -object-directory=$(dir $i) $(notdir $i) >> $1_output.txt ;)
 		$Q mv $1_output.txt gcov/$1_tests/ $(QUIET)
 		$Q mv *.gcov gcov/$1_tests/ $(QUIET)
@@ -237,25 +237,25 @@ clean :
 # *** Pattern Rules ***
 $(HOST_OBJDIR)/%.o : %.c
 	@echo Compiling $<
-	$Q $(MAKEDIR)
+	$Q $(MAKEDIR) $(QUIET)
 	$Q $(EXTRA_COMPILE_STEP)
 	$Q $(HOST_GCC) $(HOST_GCCFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
 
 $(HOST_OBJDIR)/%.o : %.cpp
 	@echo Compiling $<
-	$Q $(MAKEDIR)
+	$Q $(MAKEDIR) $(QUIET)
 	$Q $(EXTRA_COMPILE_STEP)
 	$Q $(HOST_GPP) $(HOST_GPPFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
 
 $(GCOV_HOST_OBJDIR)/%.o : %.c
 	@echo Compiling $<
-	$Q $(MAKEDIR)
+	$Q $(MAKEDIR) $(QUIET)
 	$Q $(REMOVE) $(call obj_to_gcda,$@) $(QUIET)
 	$Q $(HOST_GCC) $(GCOV_HOST_GCCFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
 
 $(GCOV_HOST_OBJDIR)/%.o : %.cpp
 	@echo Compiling $<
-	$Q $(MAKEDIR)
+	$Q $(MAKEDIR) $(QUIET)
 	$Q $(REMOVE) $(call obj_to_gcda,$@) $(QUIET)
 	$Q $(HOST_GPP) $(GCOV_HOST_GPPFLAGS) $(call includes,$(INCLUDES)) -c $< -o $@
 

@@ -19,6 +19,7 @@
 #include <mri.h>
 #include <mriPlatform.h>
 #include <platforms.h>
+#include <posix4win.h>
 #include <printfSpy.h>
 #include <semihost.h>
 

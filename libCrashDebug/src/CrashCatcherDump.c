@@ -91,7 +91,7 @@ static void initObject(Object* pObject,
 
 static FILE* openFileAndThrowOnError(const char* pLogFilename)
 {
-    FILE* pLogFile = fopen(pLogFilename, "r");
+    FILE* pLogFile = fopen(pLogFilename, "rb");
     if (!pLogFile)
         __throw(fileException);
     return pLogFile;

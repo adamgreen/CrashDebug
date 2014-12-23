@@ -31,6 +31,53 @@ int    (*hook_printf)(const char* pFormat, ...) = printf;
 #ifdef WIN32
 /* Windows */
 
+#include <windows.h>
+#include <conio.h>
+
+static HANDLE     g_stdIn = INVALID_HANDLE_VALUE;
+static HANDLE     g_stdOut = INVALID_HANDLE_VALUE;
+
+static void initStdIo(void);
+
+int Console_HasStdInDataToRead()
+{
+    return _kbhit();
+}
+
+static void initStdIo(void)
+{
+    if (g_stdIn != INVALID_HANDLE_VALUE  && g_stdOut != INVALID_HANDLE_VALUE)
+        return;
+    g_stdIn = GetStdHandle(STD_INPUT_HANDLE);
+    g_stdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+}
+
+
+int Console_ReadStdIn()
+{
+    char   c = 0;
+    DWORD  bytesRead = 0;
+    BOOL   result = FALSE;
+    
+    initStdIo();
+    result = ReadFile(g_stdIn, &c, sizeof(c), &bytesRead, NULL);
+    if (!result || bytesRead != sizeof(c))
+        __throw(fileException);
+    return c;
+}
+
+void Console_WriteStdOut(int character)
+{
+    char   c = (char)character;
+    DWORD  bytesWritten = 0;
+    BOOL   result = FALSE;
+    
+    initStdIo();
+    result = WriteFile(g_stdOut, &c, sizeof(c), &bytesWritten, NULL);
+    if (!result || bytesWritten != sizeof(c))
+        __throw(fileException);
+}
+
 #else
 /* Posix */
 

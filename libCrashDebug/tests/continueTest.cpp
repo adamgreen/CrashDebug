@@ -10,7 +10,6 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 */
-#include <signal.h>
 #include "mriPlatformBaseTest.h"
 
 TEST_GROUP_BASE(continueTests, mriPlatformBase)

@@ -12,7 +12,6 @@
 */
 extern "C"
 {
-    #include <signal.h>
     #include <mri.h>
     #include <MallocFailureInject.h>
 }

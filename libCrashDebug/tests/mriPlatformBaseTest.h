@@ -17,7 +17,9 @@ extern "C"
     #include <common.h>
     #include <MemorySim.h>
     #include <mriPlatform.h>
+    #include <posix4win.h>
     #include <printfSpy.h>
+    #include <signal.h>
 }
 
 // Include standard headers.

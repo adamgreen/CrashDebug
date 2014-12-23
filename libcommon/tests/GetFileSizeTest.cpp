@@ -27,7 +27,7 @@ TEST_GROUP(GetFileSize)
 
     void setup()
     {
-        m_testFile = fopen(testFilename, "w");
+        m_testFile = fopen(testFilename, "wb");
     }
 
     void teardown()

@@ -212,7 +212,7 @@ static FileData loadFileData(const char* pFilename)
     {
         size_t bytesRead = 0;
 
-        pFile = fopen(pFilename, "r");
+        pFile = fopen(pFilename, "rb");
         if (!pFile)
             __throw(fileException);
         fileSize = GetFileSize(pFile);
@@ -267,7 +267,7 @@ static DumpFileType getFileType(const char* pDumpFilename)
 {
     uint8_t fileHeader[4] = { 0, 0, 0, 0 };
 
-    FILE*   pFile = fopen(pDumpFilename, "r");
+    FILE*   pFile = fopen(pDumpFilename, "rb");
     if (!pFile)
         __throw(fileException);
     fread(fileHeader, 1, sizeof(fileHeader), pFile);
