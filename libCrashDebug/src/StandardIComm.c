@@ -12,9 +12,7 @@
 */
 #include <assert.h>
 #include <common.h>
-#include <mockFileIo.h>
-#include <mockSock.h>
-#include <netdb.h>
+#include <Console.h>
 #include <StandardIComm.h>
 #include <string.h>
 
@@ -34,8 +32,6 @@ static struct StandardIComm
 {
     ICommVTable* pVTable;
 } g_comm = {&g_icommVTable};
-
-static int stdinHasDataToRead();
 
 
 __throws IComm* StandardIComm_Init()
@@ -58,50 +54,24 @@ static int hasReceiveData(IComm* pComm)
 
     __try
     {
-        hasData = stdinHasDataToRead();
+        hasData = Console_HasStdInDataToRead();
     }
     __catch
     {
+        clearExceptionCode();
         return FALSE;
     }
     return hasData;
 }
 
-static int stdinHasDataToRead()
-{
-    int            result = -1;
-    struct timeval zeroTimeout = {0, 0};
-    fd_set         readSet;
-
-    FD_ZERO(&readSet);
-    FD_SET(STDIN_FILENO, &readSet);
-    result = select(STDIN_FILENO + 1, &readSet, NULL, NULL, &zeroTimeout);
-    if (result == -1)
-        __throw(fileException);
-    return result;
-}
-
 static int receiveChar(IComm* pComm)
 {
-    ssize_t result = -1;
-    char    c = 0;
-
-    result = read(STDIN_FILENO, &c, sizeof(c));
-    if (result == -1)
-    {
-        __throw(fileException);
-    }
-    return c;
+    return Console_ReadStdIn();
 }
 
 static void sendChar(IComm* pComm, int character)
 {
-    ssize_t result = -1;
-    char    c = (char)character;
-
-    result = write(STDOUT_FILENO, &c, sizeof(c));
-    if (result == -1)
-        __throw(fileException);
+    Console_WriteStdOut(character);
 }
 
 static int shouldStopRun(IComm* pComm)
@@ -113,3 +83,4 @@ static int  isGdbConnected(IComm* pComm)
 {
     return TRUE;
 }
+

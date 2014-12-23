@@ -10,54 +10,66 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 */
-#include <fcntl.h>
-#include <stdlib.h>
+#include <Console.h>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <unistd.h>
 
 
 /* Not using my test mocks in production so point hooks to Standard CRT functions. */
+FILE*  (*hook_fopen)(const char* filename, const char* mode) = fopen;
+int    (*hook_fclose)(FILE* stream) = fclose;
+size_t (*hook_fread)(void* ptr, size_t size, size_t nitems, FILE* stream) = fread;
+int    (*hook_fseek)(FILE* stream, long offset, int whence) = fseek;
+long   (*hook_ftell)(FILE* stream) = ftell;
+char*  (*hook_fgets)(char * str, int size, FILE * stream) = fgets;
 void*  (*hook_malloc)(size_t size) = malloc;
 void*  (*hook_realloc)(void* ptr, size_t size) = realloc;
 void   (*hook_free)(void* ptr) = free;
 int    (*hook_printf)(const char* pFormat, ...) = printf;
-int    (*hook_fprintf)(FILE* pFile, const char* pFormat, ...) = fprintf;
-FILE*  (*hook_fopen)(const char* filename, const char* mode) = fopen;
-int    (*hook_fclose)(FILE* stream) = fclose;
-int    (*hook_fseek)(FILE* stream, long offset, int whence) = fseek;
-long   (*hook_ftell)(FILE* stream) = ftell;
-size_t (*hook_fwrite)(const void* ptr, size_t size, size_t nitems, FILE* stream) = fwrite;
-size_t (*hook_fread)(void* ptr, size_t size, size_t nitems, FILE* stream) = fread;
 
-int     (*hook_open)(const char *path, int oflag, ...) = open;
-ssize_t (*hook_read)(int fildes, void *buf, size_t nbyte) = read;
-ssize_t (*hook_write)(int fildes, const void *buf, size_t nbyte) = write;
-off_t   (*hook_lseek)(int fildes, off_t offset, int whence) = lseek;
-int     (*hook_close)(int fildes) = close;
-int     (*hook_unlink)(const char *path) = unlink;
-int     (*hook_rename)(const char *oldPath, const char *newPath) = rename;
-int     (*hook_fstat)(int fildes, struct stat *buf) = fstat;
-int     (*hook_stat)(const char* path, struct stat* buf) = stat;
-int     (*hook_feof)(FILE *stream) = feof;
-char*   (*hook_fgets)(char * str, int size, FILE * stream) = fgets;
-FILE*   (*hook_popen)(const char *command, const char *mode) = popen;
-int     (*hook_pclose)(FILE *stream) = pclose;
 
-int (*hook_socket)(int domain, int type, int protocol) = socket;
-int (*hook_setsockopt)(int socket,
-                       int level,
-                       int option_name,
-                       const void *option_value,
-                       socklen_t option_len) = setsockopt;
-int (*hook_bind)(int socket, const struct sockaddr *address, socklen_t address_len) = bind;
-int (*hook_listen)(int socket, int backlog) = listen;
-int (*hook_accept)(int socket, struct sockaddr* address, socklen_t* address_len) = accept;
-int (*hook_select)(int nfds,
-                   fd_set* readfds,
-                   fd_set* writefds,
-                   fd_set* errorfds,
-                   struct timeval* timeout) = select;
-ssize_t (*hook_recv)(int socket, void *buffer, size_t length, int flags) = recv;
-ssize_t (*hook_send)(int socket, const void *buffer, size_t length, int flags) = send;
+/* Provide different implementation of Console* functions depending on whether building for a Posix or Windows OS. */
+#ifdef WIN32
+/* Windows */
+
+#else
+/* Posix */
+
+#include <sys/select.h>
+#include <unistd.h>
+
+int Console_HasStdInDataToRead()
+{
+    int            result = -1;
+    struct timeval zeroTimeout = {0, 0};
+    fd_set         readSet;
+
+    FD_ZERO(&readSet);
+    FD_SET(STDIN_FILENO, &readSet);
+    result = select(STDIN_FILENO + 1, &readSet, NULL, NULL, &zeroTimeout);
+    if (result == -1)
+        __throw(fileException);
+    return result;
+}
+
+int Console_ReadStdIn()
+{
+    ssize_t result = -1;
+    char    c = 0;
+
+    result = read(STDIN_FILENO, &c, sizeof(c));
+    if (result == -1)
+        __throw(fileException);
+    return c;
+}
+
+void Console_WriteStdOut(int character)
+{
+    ssize_t result = -1;
+    char    c = (char)character;
+
+    result = write(STDOUT_FILENO, &c, sizeof(c));
+    if (result == -1)
+        __throw(fileException);
+}
+
+#endif /* WIN32 */

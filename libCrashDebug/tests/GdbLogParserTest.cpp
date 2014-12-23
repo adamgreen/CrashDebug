@@ -18,7 +18,6 @@ extern "C"
     #include <FileFailureInject.h>
     #include <GdbLogParser.h>
     #include <MallocFailureInject.h>
-    #include <mockFileIo.h>
 }
 
 // Include C++ headers for test harness.
@@ -58,7 +57,7 @@ TEST_GROUP(GdbLogParser)
         fcloseRestore();
         fseekRestore();
         MemorySim_Uninit(m_pMem);
-        mockFileIo_Uninit();
+        fgetsRestore();
         MallocFailureInject_Restore();
         clearExceptionCode();
     }
@@ -85,7 +84,7 @@ TEST(GdbLogParser, OneLineLogFile_1RamValue_FailFSeekCall_ShouldThrow)
 {
     static const char* testLines[] = { "0x10000000:\t0x11111111" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
     fseekSetReturn(-1);
         __try_and_catch( GdbLogParse(m_pMem, &m_actualRegisters, "foo.log") );
     CHECK_EQUAL(fileException, getExceptionCode());
@@ -98,6 +97,7 @@ TEST(GdbLogParser, EmptyLogfile_ShouldReturnNoRegions)
                                             "<!DOCTYPE memory-map PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\" \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
                                             "<memory-map>"
                                             "</memory-map>";
+    fgetsSetData(NULL, 0);
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForEmptyRegions, pMemoryLayout);
@@ -111,7 +111,7 @@ TEST(GdbLogParser, OneLineLogFile_NotRamOrRegisters_ShouldReturnNoRegions)
                                             "</memory-map>";
     static const char* testLines[] = { "56	GPIO leds[5] = {" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForEmptyRegions, pMemoryLayout);
@@ -126,7 +126,7 @@ TEST(GdbLogParser, OneLineLogFile_1RamValue_ShouldReturn1WordRegion)
                                       "</memory-map>";
     static const char* testLines[] = { "0x10000000:\t0x11111111" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
@@ -142,7 +142,7 @@ TEST(GdbLogParser, OneLineLogFile_4RamValues_ShouldReturn4WordRegion)
                                       "</memory-map>";
     static const char* testLines[] = { "0x10000000:\t0x11111111\t0x22222222\t0x33333333\t0x44444444" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
@@ -161,7 +161,7 @@ TEST(GdbLogParser, OneLineLogFile_AddressSymbolAnd4RamValues_ShouldReturn4WordRe
                                       "</memory-map>";
     static const char* testLines[] = { "0x10000000 <impure_data>:\t0x11111111\t0x22222222\t0x33333333\t0x44444444" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
@@ -180,7 +180,7 @@ TEST(GdbLogParser, OneLineLogFile_5RamValues_ShouldReturn4WordRegion)
                                       "</memory-map>";
     static const char* testLines[] = { "0x10000000:\t0x11111111\t0x22222222\t0x33333333\t0x44444444\t55555555" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
@@ -199,7 +199,7 @@ TEST(GdbLogParser, OneLineLogFile_4RamValuesWithSymbols_ShouldReturn4WordRegion)
                                       "</memory-map>";
     static const char* testLines[] = { "0x10000000:\t0x11111111 <symbol>\t0x22222222 <<symbol>>\t0x33333333<<<symbol>>>\t0x44444444<<<<symbol>>>>" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
@@ -219,7 +219,7 @@ TEST(GdbLogParser, TwoLineLogFile_8RamValues_ShouldReturn8WordRegion)
     static const char* testLines[] = { "0x10000000:\t0x11111111\t0x22222222\t0x33333333\t0x44444444",
                                        "0x10000010:\t0x55555555\t0x66666666\t0x77777777\t0x88888888" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
@@ -244,7 +244,7 @@ TEST(GdbLogParser, TwoLineLogFile_8RamValues_ShouldReturnTwo4WordRegions)
     static const char* testLines[] = { "0x10000000:\t0x11111111\t0x22222222\t0x33333333\t0x44444444",
                                        "0x20000000:\t0x55555555\t0x66666666\t0x77777777\t0x88888888" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
@@ -266,7 +266,7 @@ TEST(GdbLogParser, FailMemoryAllocationForRegion_ShouldThrow)
                                       "</memory-map>";
     static const char* testLines[] = { "0x10000000:\t0x11111111" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
     MallocFailureInject_FailAllocation(1);
         __try_and_catch( GdbLogParse(m_pMem, &m_actualRegisters, "foo.log") );
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
@@ -283,7 +283,7 @@ TEST(GdbLogParser, OneLineLogFile_JustR0Register_ShouldReturnNoRegionsAndSetR0)
                                             "</memory-map>";
     static const char* testLines[] = { "r0             0x11111111\t286331153" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForEmptyRegions, pMemoryLayout);
@@ -314,7 +314,7 @@ TEST(GdbLogParser, HaveAllRegisters_ShouldReturnNoRegionsAndSetAllRegisters)
                                        "pc             0xffffffff",
                                        "xpsr           0xf00df00d" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForEmptyRegions, pMemoryLayout);
@@ -365,7 +365,7 @@ TEST(GdbLogParser, HaveAllRegistersAndTwoMemoryBanks_ShouldReturnTwoRegionsAndSe
                                        "pc             0xffffffff",
                                        "xpsr           0xf00df00d" };
 
-    mockFileIo_SetFgetsData(testLines, ARRAY_SIZE(testLines));
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForMemory, pMemoryLayout);

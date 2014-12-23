@@ -14,8 +14,7 @@
 
 extern "C"
 {
-    #include <mockFileIo.h>
-    #include <mockSock.h>
+    #include <mockConsole.h>
     #include <StandardIComm.h>
 }
 
@@ -30,16 +29,14 @@ TEST_GROUP(StandardIComm)
         clearExceptionCode();
         m_pComm = StandardIComm_Init();
         CHECK(m_pComm != NULL);
-        mockSock_Init(5);
-        mockFileIo_CreateWriteBuffer(5);
+        ConsoleMock_WriteStdOut_SetCaptureBufferSize(5);
     }
 
     void teardown()
     {
         CHECK_EQUAL(noException, getExceptionCode());
         StandardIComm_Uninit(m_pComm);
-        mockSock_Uninit();
-        mockFileIo_Uninit();
+        ConsoleMock_Uninit();
     }
 };
 
@@ -50,32 +47,29 @@ TEST(StandardIComm, ShouldStopRun_AlwaysReturnFALSE)
 }
 
 
-TEST(StandardIComm, FailSelectCall_HasReceiveData_ShouldThrow)
+TEST(StandardIComm, HasReceiveData_ThrowException_ShouldReturnFalse)
 {
-    mockSock_selectSetReturn(-1);
-        __try_and_catch( IComm_HasReceiveData(m_pComm) );
-    CHECK_EQUAL(fileException, getExceptionCode());
-    clearExceptionCode();
+    ConsoleMock_HasStdInDataToRead_SetException(fileException);
+    CHECK_FALSE(IComm_HasReceiveData(m_pComm));
 }
 
-TEST(StandardIComm, HasReceiveData_SelectReturn1_ShouldReturnTrue)
+TEST(StandardIComm, HasReceiveData_Return1_ShouldReturnTrue)
 {
-    mockSock_selectSetReturn(1);
+    ConsoleMock_HasStdInDataToRead_SetReturn(1);
     CHECK_TRUE(IComm_HasReceiveData(m_pComm));
 }
 
-TEST(StandardIComm, HasReceiveData_SelectReturn0_ShouldReturnFalse)
+TEST(StandardIComm, HasReceiveData_Return0_ShouldReturnFalse)
 {
-    mockSock_selectSetReturn(0);
+    ConsoleMock_HasStdInDataToRead_SetReturn(0);
     CHECK_FALSE(IComm_HasReceiveData(m_pComm));
 }
 
 
-TEST(StandardIComm, ReceiveChar_ReadReturnNegativeOne_ShouldThrow)
+TEST(StandardIComm, ReceiveChar_ThrowException_VerifyExceptionThrown)
 {
-    mockSock_selectSetReturn(1);
-    mockFileIo_SetReadData("a", 1);
-    mockFileIo_SetReadToFail(-1, -1);
+    ConsoleMock_ReadStdIn_SetException(fileException);
+    ConsoleMock_ReadStdIn_SetBuffer("a", 1);
         __try_and_catch( IComm_ReceiveChar(m_pComm) );
     CHECK_EQUAL(fileException, getExceptionCode());
     clearExceptionCode();
@@ -83,23 +77,15 @@ TEST(StandardIComm, ReceiveChar_ReadReturnNegativeOne_ShouldThrow)
 
 TEST(StandardIComm, ReceiveChar_ReadSingleChar)
 {
-    mockSock_selectSetReturn(1);
-    mockFileIo_SetReadData("a", 1);
+    ConsoleMock_ReadStdIn_SetBuffer("a", 1);
     char c = IComm_ReceiveChar(m_pComm);
     CHECK_EQUAL('a', c);
 }
 
-TEST(StandardIComm, ReceiveChar_ReadReturnZero_ShouldReturnZero)
-{
-    mockSock_selectSetReturn(1);
-        char c = IComm_ReceiveChar(m_pComm);
-    CHECK_EQUAL(0, c);
-}
 
-
-TEST(StandardIComm, SendChar_FailWrite_ShouldThrow)
+TEST(StandardIComm, SendChar_ThrowException_VerifyExceptionThrown)
 {
-    mockFileIo_SetWriteToFail(-1, -1);
+    ConsoleMock_WriteStdOut_SetException(fileException);
         __try_and_catch( IComm_SendChar(m_pComm, 'z') );
     CHECK_EQUAL(fileException, getExceptionCode());
     clearExceptionCode();
@@ -110,7 +96,7 @@ TEST(StandardIComm, SendChar_VerifySuccessfullySentBytes)
     IComm_SendChar(m_pComm, 'x');
     IComm_SendChar(m_pComm, 'y');
     IComm_SendChar(m_pComm, 'z');
-    STRCMP_EQUAL("xyz", mockFileIo_GetStdOutData());
+    STRCMP_EQUAL("xyz", ConsoleMock_WriteStdOut_GetCapturedText());
 }
 
 

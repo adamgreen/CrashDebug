@@ -14,7 +14,6 @@
 #include <ctype.h>
 #include <GdbLogParser.h>
 #include <FileFailureInject.h>
-#include <mockFileIo.h>
 #include <stdio.h>
 #include <string.h>
 

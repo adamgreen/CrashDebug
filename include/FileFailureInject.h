@@ -23,6 +23,7 @@ extern int    (*hook_fseek)(FILE* stream, long offset, int whence);
 extern long   (*hook_ftell)(FILE* stream);
 extern size_t (*hook_fwrite)(const void* ptr, size_t size, size_t nitems, FILE* stream);
 extern size_t (*hook_fread)(void* ptr, size_t size, size_t nitems, FILE* stream);
+extern char*  (*hook_fgets)(char * str, int size, FILE * stream);
 
 void fopenSetReturn(FILE* pFailureReturn);
 void fopenRestore(void);
@@ -44,6 +45,9 @@ void freadFail(size_t failureReturn);
 void freadToFail(int readToFail);
 void freadRestore(void);
 
+void fgetsSetData(const char** ppLines, size_t lineCount);
+void fgetsRestore(void);
+
 
 /* Force file I/O routines to go through hooking routines in unit tests. */
 #define fopen  hook_fopen
@@ -52,6 +56,7 @@ void freadRestore(void);
 #define ftell  hook_ftell
 #define fwrite hook_fwrite
 #define fread  hook_fread
+#define fgets  hook_fgets
 
 
 #endif /* _FILE_FAILURE_INJECT_H_ */

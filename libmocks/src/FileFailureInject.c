@@ -12,6 +12,7 @@
 */
 /* Module for injecting failures into file I/O calls. */
 #include <stdio.h>
+#include <string.h>
 
 
 #define FAIL_ALL_CALLS -1
@@ -23,15 +24,19 @@ int    (*hook_fseek)(FILE* stream, long offset, int whence) = fseek;
 long   (*hook_ftell)(FILE* stream) = ftell;
 size_t (*hook_fwrite)(const void* ptr, size_t size, size_t nitems, FILE* stream) = fwrite;
 size_t (*hook_fread)(void* ptr, size_t size, size_t nitems, FILE* stream) = fread;
+char*   (*hook_fgets)(char * str, int size, FILE * stream) = fgets;
 
 
-static FILE*  g_fopenFailureReturn;
-static int    g_fseekFailureReturn;
-static int    g_fseekCallsToPass;
-static long   g_ftellFailureReturn;
-static size_t g_fwriteFailureReturn;
-static size_t g_freadFailureReturn;
-static int    g_freadToFail;
+static FILE*        g_fopenFailureReturn;
+static int          g_fseekFailureReturn;
+static int          g_fseekCallsToPass;
+static long         g_ftellFailureReturn;
+static size_t       g_fwriteFailureReturn;
+static size_t       g_freadFailureReturn;
+static int          g_freadToFail;
+static const char** g_ppFgetsStart;
+static const char** g_ppFgetsEnd;
+static const char** g_ppFgetsCurr;
 
 void freadRestore(void);
 
@@ -176,4 +181,37 @@ void freadRestore(void)
 {
     hook_fread = fread;
     g_freadToFail = 0;
+}
+
+
+static char*   mock_fgets(char * str, int size, FILE * stream);
+void fgetsSetData(const char** ppLines, size_t lineCount)
+{
+    hook_fgets = mock_fgets;
+    g_ppFgetsStart = ppLines;
+    g_ppFgetsCurr = ppLines;
+    g_ppFgetsEnd = ppLines + lineCount;
+}
+
+static char* mock_fgets(char * str, int size, FILE * stream)
+{
+    if (g_ppFgetsCurr >= g_ppFgetsEnd)
+    {
+        // Rewind to start so that file can be processed again.
+        g_ppFgetsCurr = g_ppFgetsStart;
+        // Return EOF condition once.
+        return NULL;
+    }
+
+    strncpy(str, *g_ppFgetsCurr++, size);
+    str[size-1] = '\0';
+    return str;
+}
+
+void fgetsRestore(void)
+{
+    hook_fgets = fgets;
+    g_ppFgetsStart = NULL;
+    g_ppFgetsCurr = NULL;
+    g_ppFgetsEnd = NULL;
 }

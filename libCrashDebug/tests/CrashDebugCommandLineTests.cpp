@@ -19,7 +19,6 @@ extern "C"
     #include <ElfPriv.h>
     #include <FileFailureInject.h>
     #include <MallocFailureInject.h>
-    #include <mockFileIo.h>
     #include <CrashDebugCommandLine.h>
     #include <printfSpy.h>
 }

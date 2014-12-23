@@ -14,7 +14,8 @@
 // Include headers from C modules under test.
 extern "C"
 {
-    #include "FileFailureInject.h"
+    #include <common.h>
+    #include <FileFailureInject.h>
 }
 
 // Include C++ headers for test harness.
@@ -33,6 +34,7 @@ TEST_GROUP(FileFailureInject)
 
     void teardown()
     {
+        fgetsRestore();
         if (m_pFile)
             fclose(m_pFile);
         remove(testFilename);
@@ -157,4 +159,47 @@ TEST(FileFailureInject, FailSecondOutOfThreeFReads)
     LONGS_EQUAL(0, hook_fread(buffer, 1, 1, m_pFile));
     LONGS_EQUAL(1, hook_fread(buffer, 1, 1, m_pFile));
     freadRestore();
+}
+
+
+TEST(FileFailureInject, SetFgetsData_OneLine)
+{
+    const char* ppTestData[] = { "Line1" };
+    char        buffer[16];
+    fgetsSetData(ppTestData, ARRAY_SIZE(ppTestData));
+        char* pResult = fgets(buffer, sizeof(buffer), NULL);
+    CHECK_EQUAL(buffer, pResult);
+    STRCMP_EQUAL(ppTestData[0], buffer);
+        pResult = fgets(buffer, sizeof(buffer), NULL);
+    POINTERS_EQUAL(NULL, pResult);
+}
+
+TEST(FileFailureInject, SetFgetsData_TwoLines)
+{
+    const char* ppTestData[] = { "Line1", "Line2" };
+    char        buffer[16];
+    fgetsSetData(ppTestData, ARRAY_SIZE(ppTestData));
+        char* pResult = fgets(buffer, sizeof(buffer), NULL);
+    CHECK_EQUAL(buffer, pResult);
+    STRCMP_EQUAL(ppTestData[0], buffer);
+        pResult = fgets(buffer, sizeof(buffer), NULL);
+    CHECK_EQUAL(buffer, pResult);
+    STRCMP_EQUAL(ppTestData[1], buffer);
+        pResult = fgets(buffer, sizeof(buffer), NULL);
+    POINTERS_EQUAL(NULL, pResult);
+}
+
+TEST(FileFailureInject, SetFgetsData_OneLine_MakeSureThatDataRewindsAfterEOF)
+{
+    const char* ppTestData[] = { "Line1" };
+    char        buffer[16];
+    fgetsSetData(ppTestData, ARRAY_SIZE(ppTestData));
+        char* pResult = fgets(buffer, sizeof(buffer), NULL);
+    CHECK_EQUAL(buffer, pResult);
+    STRCMP_EQUAL(ppTestData[0], buffer);
+        pResult = fgets(buffer, sizeof(buffer), NULL);
+    POINTERS_EQUAL(NULL, pResult);
+        pResult = fgets(buffer, sizeof(buffer), NULL);
+    CHECK_EQUAL(buffer, pResult);
+    STRCMP_EQUAL(ppTestData[0], buffer);
 }
