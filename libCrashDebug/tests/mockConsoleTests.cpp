@@ -15,7 +15,7 @@
 extern "C"
 {
     #include <Console.h>
-    #include <MockConsole.h>
+    #include <mockConsole.h>
 }
 
 

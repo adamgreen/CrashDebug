@@ -11,7 +11,7 @@
     GNU General Public License for more details.
 */
 #include <Console.h>
-#include <MockConsole.h>
+#include <mockConsole.h>
 
 
 static int         g_hasStdInDataToReadException = noException;
