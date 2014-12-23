@@ -45,6 +45,11 @@ ifeq "$(OS)" "Windows_NT"
     QUIET := >nul 2>nul & exit 0
     EXE := .exe
 else
+ifeq "$(shell uname)" "Darwin"
+    GCOV_OBJDIR_FLAG=-object-directory
+else
+    GCOV_OBJDIR_FLAG=--object-directory
+endif
     MAKEDIR = mkdir -p $(dir $@)
     REMOVE := rm
     REMOVE_DIR := rm -r -f
@@ -113,7 +118,7 @@ define run_gcov
     GCOV_$1 : GCOV_RUN_$1_TESTS
 		$Q $(REMOVE) $1_output.txt $(QUIET)
 		$Q $(MAKEDIR) -p gcov/$1_tests $(QUIET)
-		$Q $(foreach i,$(GCOV_HOST_$1_OBJ),gcov -object-directory=$(dir $i) $(notdir $i) >> $1_output.txt ;)
+		$Q $(foreach i,$(GCOV_HOST_$1_OBJ),gcov $(GCOV_OBJDIR_FLAG)=$(dir $i) $(notdir $i) >> $1_output.txt ;)
 		$Q mv $1_output.txt gcov/$1_tests/ $(QUIET)
 		$Q mv *.gcov gcov/$1_tests/ $(QUIET)
 		$Q mri/CppUTest/scripts/filterGcov.sh gcov/$1_tests/$1_output.txt /dev/null gcov/$1_tests/$1.txt
