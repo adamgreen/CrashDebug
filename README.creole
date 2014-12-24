@@ -15,8 +15,6 @@ generation and debugging on other targets (Linux for example) but not for Cortex
 
 A developer just needs these things to conduct post-mortem debugging:
 * This CrashDebug remote debugging stub for GDB.
-** //Please Note: I am currently developing this on OS X so it might not build and/or function on other platforms yet.
-   I do have plans to support it on Windows and Ubuntu in the future.
 * arm-none-eabi-gdb which can be found and installed from [[https://launchpad.net/gcc-arm-embedded | this website.]]
 * The {{{.elf}}} which corresponds to the firmware running on the Cortex-M processor at the time of the crash. 
 ** Contains the symbols required by GDB.
@@ -83,6 +81,11 @@ include code coverage instrumentation and then reports the resulting code covera
 tests.\\
 {{{make CrashDebug}}} - Builds the CrashDebug application and all of the libraries on which it depends while skipping
 the unit tests.  **Windows** users would run {{{make CrashDebug.exe}}} instead.\\
+
+The build has been tested on the following operating systems:
+* OS X Mavericks
+* Windows 7
+* Ubuntu 12.04
 
 === Parallel Build Notes
 The user should feel free to use the {{{-j}}} or {{{--jobs}}} command line flag with GNU Make to let it perform the
