@@ -119,7 +119,7 @@ define run_gcov
     GCOV_$1 : GCOV_RUN_$1_TESTS
 		$Q $(REMOVE) $1_output.txt $(QUIET)
 		$Q mkdir $(subst /,\,gcov/$1_tests) $(QUIET)
-		$Q $(foreach i,$(GCOV_HOST_$1_OBJ),gcov $(GCOV_OBJDIR_FLAG) $(dir $i)$(notdir $i)  >> $1_output.txt 2>nul &&) REM
+		$Q $(foreach i,$(GCOV_HOST_$1_OBJ),gcov $(dir $i)$(notdir $i)  >> $1_output.txt 2>nul &&) REM
 		$Q move $1_output.txt gcov/$1_tests/ $(QUIET)
 		$Q move *.gcov gcov/$1_tests/ $(QUIET)
 		$Q mri\CppUTest\scripts\filterGcov.cmd gcov\$1_tests\$1_output.txt gcov\$1_tests\$1.txt
@@ -132,7 +132,7 @@ define run_gcov
     GCOV_$1 : GCOV_RUN_$1_TESTS
 		$Q $(REMOVE) $1_output.txt $(QUIET)
 		$Q mkdir -p gcov/$1_tests $(QUIET)
-		$Q $(foreach i,$(GCOV_HOST_$1_OBJ),gcov $(GCOV_OBJDIR_FLAG)=$(call $(dir $i) $(notdir $i) >> $1_output.txt ;)
+		$Q $(foreach i,$(GCOV_HOST_$1_OBJ),gcov $(GCOV_OBJDIR_FLAG)=$(dir $i) $(notdir $i) >> $1_output.txt ;)
 		$Q mv $1_output.txt gcov/$1_tests/ $(QUIET)
 		$Q mv *.gcov gcov/$1_tests/ $(QUIET)
 		$Q mri/CppUTest/scripts/filterGcov.sh gcov/$1_tests/$1_output.txt /dev/null gcov/$1_tests/$1.txt
