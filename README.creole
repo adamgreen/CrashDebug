@@ -55,6 +55,14 @@ git submodule update
 
 
 == How to Build
+=== Toolchain
+You will need a **gcc** or **clang** toolchain appropriate for your platform:
+* **OS X**: [[https://developer.apple.com/xcode/downloads/ | Xcode]] and
+   [[https://developer.apple.com/library/ios/technotes/tn2339/_index.html | it's command line tools]].
+* **Windows**: [[http://www.mingw.org/wiki/Getting_Started | MinGW]]
+* **Linux**: You will need gcc and g++.
+
+=== Makefile
 CrashDebug uses a single non-recursive makefile at the root of the project to build everything.  It supports these top
 level targets:
 * **all**: This builds the CrashDebug code, builds the unit tests, executes the unit tests, and reports the test
@@ -130,7 +138,7 @@ while $ptr < 0x20084000
 x/4wx $ptr
 set var $ptr+=16
 end
-info registers
+info all-registers
 set logging off
 set pagination on
 }}}
@@ -154,7 +162,8 @@ The following is an example of what the user will see when the
 CRASH ENCOUNTERED
 Enable logging and then press any key to start dump.
 
-63430100
+63430200
+00000000
 01000000587D0010647F0010FFFFFFFF
 3C010010CDAB56347856341200000000
 00C002407F0000005FE19BFBFF3FF7AC
@@ -182,7 +191,8 @@ dump should be deleted.  The above example should therefore be edited to look li
 the CrashDebug utility:
 
 {{{
-63430100
+63430200
+00000000
 01000000587D0010647F0010FFFFFFFF
 3C010010CDAB56347856341200000000
 00C002407F0000005FE19BFBFF3FF7AC
