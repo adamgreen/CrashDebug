@@ -41,6 +41,7 @@ static void initObject(Object* pObject,
                        const char* pCrashDumpFilename,
                        int (*read)(struct Object*, void*, size_t));
 static FILE* openFileAndThrowOnError(const char* pLogFilename);
+static void readDump(Object* pObject);
 static void validateDumpSignature(Object* pObject);
 static void readFlags(Object* pObject);
 static void readIntegerRegisters(Object* pObject);
@@ -62,11 +63,7 @@ __throws void CrashCatcherDump_ReadBinary(IMemory* pMem, RegisterContext* pConte
     __try
     {
         initObject(&object, pMem, pContext, pCrashDumpFilename, binaryRead);
-        validateDumpSignature(&object);
-        readFlags(&object);
-        readIntegerRegisters(&object);
-        readFloatingPointRegisters(&object);
-        readMemoryRegions(&object);
+        readDump(&object);
         destructObject(&object);
     }
     __catch
@@ -100,6 +97,15 @@ static FILE* openFileAndThrowOnError(const char* pLogFilename)
     if (!pLogFile)
         __throw(fileException);
     return pLogFile;
+}
+
+static void readDump(Object* pObject)
+{
+    validateDumpSignature(pObject);
+    readFlags(pObject);
+    readIntegerRegisters(pObject);
+    readFloatingPointRegisters(pObject);
+    readMemoryRegions(pObject);
 }
 
 static void validateDumpSignature(Object* pObject)
@@ -210,11 +216,7 @@ __throws void CrashCatcherDump_ReadHex(IMemory* pMem, RegisterContext* pContext,
     __try
     {
         initObject(&object, pMem, pContext, pCrashDumpFilename, hexRead);
-        validateDumpSignature(&object);
-        readFlags(&object);
-        readIntegerRegisters(&object);
-        readFloatingPointRegisters(&object);
-        readMemoryRegions(&object);
+        readDump(&object);
         destructObject(&object);
     }
     __catch
