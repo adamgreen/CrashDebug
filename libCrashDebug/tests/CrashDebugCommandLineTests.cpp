@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -64,7 +64,8 @@ static const char     g_dumpData[] =  "0x10000000:\t0x11111111\t0x22222222\t0x33
                                       "lr             0xeeeeeeee\n"
                                       "pc             0xffffffff\n"
                                       "xpsr           0xf00df00d\n";
-static const char     g_hexCrashDump[] = "63430100\r\n"
+static const char     g_hexCrashDump[] = "63430200\r\n"
+                                         "00000000\r\n"
                                          "5a5a5a5a111111112222222233333333\r\n"
                                          "44444444555555556666666677777777\r\n"
                                          "8888888899999999AAAAAAAABBBBBBBB\r\n"
@@ -74,7 +75,8 @@ static const char     g_hexCrashDump[] = "63430100\r\n"
                                          "03000000\r\n"
                                          "0000001010000010\r\n"
                                          "11111111222222223333333344444444\r\n";
-static const char     g_binCrashDump[] = "\x63\x43\x01\x00"
+static const char     g_binCrashDump[] = "\x63\x43\x02\x00"
+                                         "\x00\x00\x00\x00"
                                          "\x5a\x5a\x5a\x5a\x11\x11\x11\x11\x22\x22\x22\x22\x33\x33\x33\x33"
                                          "\x44\x44\x44\x44\x55\x55\x55\x55\x66\x66\x66\x66\x77\x77\x77\x77"
                                          "\x88\x88\x88\x88\x99\x99\x99\x99\xAA\xAA\xAA\xAA\xBB\xBB\xBB\xBB"

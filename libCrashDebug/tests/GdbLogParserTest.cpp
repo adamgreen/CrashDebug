@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -14,32 +14,20 @@
 // Include headers from C modules under test.
 extern "C"
 {
-    #include <common.h>
-    #include <FileFailureInject.h>
     #include <GdbLogParser.h>
-    #include <MallocFailureInject.h>
 }
 
-// Include C++ headers for test harness.
-#include "CppUTest/TestHarness.h"
+#include "CrashCatcherBaseTest.h"
+
 
 #define DUMMY_FILE_HANDLE (FILE*)1
 
-TEST_GROUP(GdbLogParser)
+TEST_GROUP_BASE(GdbLogParser, CrashCatcherBaseTest)
 {
-    IMemory*        m_pMem;
-    RegisterContext m_actualRegisters;
-    RegisterContext m_expectedRegisters;
-
     void setup()
     {
-        m_pMem = MemorySim_Init();
+        CrashCatcherBaseTest::setup();
         fakeLogFileAccess();
-        for (size_t i = 0 ; i < ARRAY_SIZE(m_actualRegisters.R) ; i++)
-        {
-            m_actualRegisters.R[i] = 0xDEADBEEF;
-            m_expectedRegisters.R[i] = 0xDEADBEEF;
-        }
     }
 
     void fakeLogFileAccess()
@@ -51,23 +39,11 @@ TEST_GROUP(GdbLogParser)
 
     void teardown()
     {
-        CHECK_EQUAL(noException, getExceptionCode());
-        checkRegisters();
+        CrashCatcherBaseTest::teardown();
         fopenRestore();
         fcloseRestore();
         fseekRestore();
-        MemorySim_Uninit(m_pMem);
         fgetsRestore();
-        MallocFailureInject_Restore();
-        clearExceptionCode();
-    }
-
-    void checkRegisters()
-    {
-        for (size_t i = 0 ; i < ARRAY_SIZE(m_actualRegisters.R) ; i++)
-        {
-            CHECK_EQUAL(m_expectedRegisters.R[i], m_actualRegisters.R[i]);
-        }
     }
 };
 
@@ -394,4 +370,75 @@ TEST(GdbLogParser, HaveAllRegistersAndTwoMemoryBanks_ShouldReturnTwoRegionsAndSe
     m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+}
+
+TEST(GdbLogParser, HaveAllIntegerAndFloatingPointRegisters_ShouldReturnNoRegionsAndSetAllRegisters)
+{
+    static const char* xmlForEmptyRegions = "<?xml version=\"1.0\"?>"
+                                            "<!DOCTYPE memory-map PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\" \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
+                                            "<memory-map>"
+                                            "</memory-map>";
+    static const char* testLines[] = { "r0             0x00000000\t0",
+                                       "r1             0x11111111",
+                                       "r2             0x22222222",
+                                       "r3             0x33333333",
+                                       "r4             0x44444444",
+                                       "r5             0x55555555",
+                                       "r6             0x66666666",
+                                       "r7             0x77777777",
+                                       "r8             0x88888888",
+                                       "r9             0x99999999",
+                                       "r10            0xAAAAAAAA",
+                                       "r11            0xbbbbbbbb",
+                                       "r12            0xcccccccc",
+                                       "sp             0xdddddddd",
+                                       "lr             0xeeeeeeee",
+                                       "pc             0xffffffff",
+                                       "xpsr           0xf00df00d",
+                                       "fpscr          0x1	1",
+                                       "s0             0	(raw 0x00000000)",
+                                       "s1             1",
+                                       "s2             2",
+                                       "s3             3",
+                                       "s4             4",
+                                       "s5             5",
+                                       "s6             6",
+                                       "s7             7",
+                                       "s8             8",
+                                       "s9             9",
+                                       "s10            10",
+                                       "s11            11",
+                                       "s12            12",
+                                       "s13            13",
+                                       "s14            14",
+                                       "s15            15",
+                                       "s16            16",
+                                       "s17            17",
+                                       "s18            18",
+                                       "s19            19",
+                                       "s20            20",
+                                       "s21            21",
+                                       "s22            22",
+                                       "s23            23",
+                                       "s24            24",
+                                       "s25            25",
+                                       "s26            26",
+                                       "s27            27",
+                                       "s28            28",
+                                       "s29            29",
+                                       "s30            30",
+                                       "s31            31"
+                                       };
+
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
+        GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
+    const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
+    STRCMP_EQUAL(xmlForEmptyRegions, pMemoryLayout);
+    m_expectedRegisters.flags = CRASH_CATCHER_FLAGS_FLOATING_POINT;
+    for (int i = 0 ; i < 16 ; i++)
+        m_expectedRegisters.R[i] = 0x11111111 * i;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    for (int i = 0 ; i < 32 ; i++)
+        m_expectedRegisters.FPR[i] = i;
+    m_expectedRegisters.FPR[FPSCR] = 1;
 }

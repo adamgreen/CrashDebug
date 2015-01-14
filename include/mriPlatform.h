@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -37,10 +37,48 @@
 #define XPSR            16
 #define TOTAL_REG_COUNT (XPSR + 1)
 
+/* Register names /indices into the RegisterContext::FPR array of floating point registers. */
+#define S0                  0
+#define S1                  1
+#define S2                  2
+#define S3                  3
+#define S4                  4
+#define S5                  5
+#define S6                  6
+#define S7                  7
+#define S8                  8
+#define S9                  9
+#define S10                 10
+#define S11                 11
+#define S12                 12
+#define S13                 13
+#define S14                 14
+#define S15                 15
+#define S16                 16
+#define S17                 17
+#define S18                 18
+#define S19                 19
+#define S20                 20
+#define S21                 21
+#define S22                 22
+#define S23                 23
+#define S24                 24
+#define S25                 25
+#define S26                 26
+#define S27                 27
+#define S28                 28
+#define S29                 29
+#define S30                 30
+#define S31                 31
+#define FPSCR               32
+#define TOTAL_FPREG_COUNT   (FPSCR + 1)
+
 typedef struct RegisterContext
 {
+    uint32_t flags;
     uint32_t R[TOTAL_REG_COUNT];
     uint32_t exceptionPSR;
+    uint32_t FPR[TOTAL_FPREG_COUNT];
 } RegisterContext;
 
 

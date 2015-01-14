@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -14,6 +14,7 @@
 #include <CrashCatcher.h>
 #include <CrashCatcherDump.h>
 #include <FileFailureInject.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -41,7 +42,9 @@ static void initObject(Object* pObject,
                        int (*read)(struct Object*, void*, size_t));
 static FILE* openFileAndThrowOnError(const char* pLogFilename);
 static void validateDumpSignature(Object* pObject);
-static void readRegisters(Object* pObject);
+static void readFlags(Object* pObject);
+static void readIntegerRegisters(Object* pObject);
+static void readFloatingPointRegisters(Object* pObject);
 static void readMemoryRegions(Object* pObject);
 static int readNextMemoryRegion(Object* pObject);
 static int isStackOverflowSentinelInsteadOfRegionDescription(int bytesRead, const RegionOrSentinel* pSentinel);
@@ -60,7 +63,9 @@ __throws void CrashCatcherDump_ReadBinary(IMemory* pMem, RegisterContext* pConte
     {
         initObject(&object, pMem, pContext, pCrashDumpFilename, binaryRead);
         validateDumpSignature(&object);
-        readRegisters(&object);
+        readFlags(&object);
+        readIntegerRegisters(&object);
+        readFloatingPointRegisters(&object);
         readMemoryRegions(&object);
         destructObject(&object);
     }
@@ -113,10 +118,28 @@ static void validateDumpSignature(Object* pObject)
         __throw(fileFormatException);
 }
 
-static void readRegisters(Object* pObject)
+static void readFlags(Object* pObject)
 {
-    int result = pObject->read(pObject, pObject->pContext, sizeof(*pObject->pContext));
-    if (result != sizeof(*pObject->pContext))
+    int result = pObject->read(pObject, &pObject->pContext->flags, sizeof(pObject->pContext->flags));
+    if (result != sizeof(pObject->pContext->flags))
+        __throw(fileFormatException);
+}
+
+static void readIntegerRegisters(Object* pObject)
+{
+    static const integerContextSize = offsetof(RegisterContext, FPR) - offsetof(RegisterContext, R);
+    int result = pObject->read(pObject, pObject->pContext->R, integerContextSize);
+    if (result != integerContextSize)
+        __throw(fileFormatException);
+}
+
+static void readFloatingPointRegisters(Object* pObject)
+{
+    if ((pObject->pContext->flags & CRASH_CATCHER_FLAGS_FLOATING_POINT) == 0)
+        return;
+
+    int result = pObject->read(pObject, pObject->pContext->FPR, sizeof(pObject->pContext->FPR));
+    if (result != sizeof(pObject->pContext->FPR))
         __throw(fileFormatException);
 }
 
@@ -149,7 +172,7 @@ static int readNextMemoryRegion(Object* pObject)
 
 static int isStackOverflowSentinelInsteadOfRegionDescription(int bytesRead, const RegionOrSentinel* pSentinel)
 {
-    return (bytesRead == sizeof(pSentinel->sentinel) && pSentinel->sentinel == STACK_SENTINEL);
+    return (bytesRead == sizeof(pSentinel->sentinel) && pSentinel->sentinel == CRASH_CATCHER_STACK_SENTINEL);
 }
 
 static void createAndLoadMemoryRegion(Object* pObject, CrashCatcherMemoryRegionInfo* pRegion)
@@ -188,7 +211,9 @@ __throws void CrashCatcherDump_ReadHex(IMemory* pMem, RegisterContext* pContext,
     {
         initObject(&object, pMem, pContext, pCrashDumpFilename, hexRead);
         validateDumpSignature(&object);
-        readRegisters(&object);
+        readFlags(&object);
+        readIntegerRegisters(&object);
+        readFloatingPointRegisters(&object);
         readMemoryRegions(&object);
         destructObject(&object);
     }

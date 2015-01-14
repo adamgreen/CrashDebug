@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -10,6 +10,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 */
+#include <CrashCatcher.h>
 #include <signal.h>
 #include "mriPlatformBaseTest.h"
 
@@ -46,9 +47,35 @@ TEST(registerTests, ReadRegisters)
     STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
 }
 
+TEST(registerTests, ReadIntegerAndFloatRegisters)
+{
+    m_context.flags = CRASH_CATCHER_FLAGS_FLOATING_POINT;
+    for (int i = 0 ; i < 15 ; i++)
+        m_context.R[i] = 0x11111111 * i;
+    m_context.R[PC] = 0xFFFFFFFE;
+    for (int i = 0 ; i < 31 ; i++)
+        m_context.FPR[i] = i;
+    m_context.FPR[FPSCR] = 0xBAADF00D;
+
+    mockIComm_InitReceiveChecksummedData("+$g#", "+$c#");
+        mriPlatform_Run(mockIComm_Get());
+    appendExpectedTPacket(SIGTRAP, 0xCCCCCCCC, 0xDDDDDDDD, 0xEEEEEEEE, 0xFFFFFFFE);
+    appendExpectedString("+$00000000111111112222222233333333"
+                           "44444444555555556666666677777777"
+                           "8888888899999999aaaaaaaabbbbbbbb"
+                           "ccccccccddddddddeeeeeeeefeffffff"
+                           "00000001"
+                           "0000000001000000020000000300000004000000050000000600000007000000"
+                           "08000000090000000a0000000b0000000c0000000d0000000e0000000f000000"
+                           "1000000011000000120000001300000014000000150000001600000017000000"
+                           "18000000190000001a0000001b0000001c0000001d0000001e00000000000000"
+                           "0df0adba#+");
+    STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
+}
+
 TEST(registerTests, WriteRegisters)
 {
-    memset(&m_context, 0xa5, 16 * sizeof(uint32_t));
+    memset(m_context.R, 0xa5, 16 * sizeof(uint32_t));
     mockIComm_InitReceiveChecksummedData("+$G00000000111111112222222233333333"
                                             "44444444555555556666666677777777"
                                             "8888888899999999aaaaaaaabbbbbbbb"
@@ -63,4 +90,32 @@ TEST(registerTests, WriteRegisters)
         CHECK_EQUAL(0x11111111U * i, m_context.R[i]);
     CHECK_EQUAL(0xFFFFFFFEU, m_context.R[PC]);
     CHECK_EQUAL(0xFFFFFFFFU, m_context.R[XPSR]);
+}
+
+TEST(registerTests, WriteIntegerAndFloatRegisters)
+{
+    memset(m_context.R, 0xa5, 16 * sizeof(uint32_t));
+    m_context.flags = CRASH_CATCHER_FLAGS_FLOATING_POINT;
+    mockIComm_InitReceiveChecksummedData("+$G00000000111111112222222233333333"
+                                            "44444444555555556666666677777777"
+                                            "8888888899999999aaaaaaaabbbbbbbb"
+                                            "ccccccccddddddddeeeeeeeefeffffff"
+                                            "ffffffff"
+                                            "0000000001000000020000000300000004000000050000000600000007000000"
+                                            "08000000090000000a0000000b0000000c0000000d0000000e0000000f000000"
+                                            "1000000011000000120000001300000014000000150000001600000017000000"
+                                            "18000000190000001a0000001b0000001c0000001d0000001e00000000000000"
+                                            "0df0adba#", "+$c#");
+        mriPlatform_Run(mockIComm_Get());
+    appendExpectedTPacket(SIGTRAP, 0xA5A5A5A5, 0xA5A5A5A5, 0xA5A5A5A5, 0xA5A5A5A5);
+    appendExpectedString("+$OK#+");
+    STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
+
+    for (int i = 0 ; i < 15 ; i++)
+        CHECK_EQUAL(0x11111111U * i, m_context.R[i]);
+    CHECK_EQUAL(0xFFFFFFFEU, m_context.R[PC]);
+    CHECK_EQUAL(0xFFFFFFFFU, m_context.R[XPSR]);
+    for (uint32_t i = 0 ; i < 15 ; i++)
+        CHECK_EQUAL(i, m_context.FPR[i]);
+    CHECK_EQUAL(0xBAADF00D, m_context.FPR[FPSCR]);
 }

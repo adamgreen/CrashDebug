@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -11,9 +11,11 @@
     GNU General Public License for more details.
 */
 #include <common.h>
+#include <CrashCatcher.h>
 #include <ctype.h>
 #include <GdbLogParser.h>
 #include <FileFailureInject.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -46,7 +48,7 @@ typedef struct ParseResults
         };
         struct
         {
-            size_t   registerIndex;
+            size_t   registerOffset;
             uint32_t registerValue;
         };
     };
@@ -57,6 +59,8 @@ typedef struct ParseResults
 static FILE* openFileAndThrowOnError(const char* pLogFilename);
 static void firstPassHandler(ParseObject* pObject, const ParseResults* pParseResults);
 static void firstPassMemoryHandler(ParseObject* pObject, const ParseResults* pParseResults);
+static void firstPassRegisterHandler(ParseObject* pObject, const ParseResults* pParseResults);
+static int isFloatingPointRegister(size_t registerOffset);
 static void secondPassHandler(ParseObject* pObject, const ParseResults* pParseResults);
 static void parseLines(IMemory* pMem,
                        RegisterContext* pContext,
@@ -74,8 +78,8 @@ static const char* skipWhitespaceAndSymbol(const char* pLine);
 static const char* skipWhitespace(const char* pLine);
 static const char* skipSymbol(const char* pLine);
 static const char* parseValue(ParseResults* pResults, const char* pLine);
-static int isRegisterLine(const char* pLine, size_t* pRegisterIndex);
-static ParseResults parseRegisterLine(const char* pLine, size_t registerIndex);
+static int isRegisterLine(const char* pLine, size_t* pRegisterOffset);
+static ParseResults parseRegisterLine(const char* pLine, size_t registerOffset);
 static ParseResults parseOtherLine(const char* pLine);
 static void rewindLogFileAndThrowOnError(FILE* pLogFile);
 
@@ -116,7 +120,7 @@ static void firstPassHandler(ParseObject* pObject, const ParseResults* pParseRes
         firstPassMemoryHandler(pObject, pParseResults);
         break;
     case TYPE_REGISTER:
-        pObject->pContext->R[pParseResults->registerIndex] = pParseResults->registerValue;
+        firstPassRegisterHandler(pObject, pParseResults);
         break;
     case TYPE_OTHER:
     default:
@@ -135,6 +139,19 @@ static void firstPassMemoryHandler(ParseObject* pObject, const ParseResults* pPa
     }
     pObject->regionSize += pParseResults->valueCount * sizeof(uint32_t);
     pObject->nextExpectedAddress = pParseResults->address + pParseResults->valueCount * sizeof(uint32_t);
+}
+
+static void firstPassRegisterHandler(ParseObject* pObject, const ParseResults* pParseResults)
+{
+    if (isFloatingPointRegister(pParseResults->registerOffset))
+        pObject->pContext->flags |= CRASH_CATCHER_FLAGS_FLOATING_POINT;
+    *(uint32_t*)((uint8_t*)pObject->pContext + pParseResults->registerOffset) = pParseResults->registerValue;
+}
+
+static int isFloatingPointRegister(size_t registerOffset)
+{
+    return registerOffset >= offsetof(RegisterContext, FPR[S0]) &&
+           registerOffset <= offsetof(RegisterContext, FPR[FPSCR]);
 }
 
 static void secondPassHandler(ParseObject* pObject, const ParseResults* pParseResults)
@@ -169,11 +186,11 @@ static void parseLines(IMemory* pMem,
 
 static ParseResults parseLine(const char* pLine)
 {
-    size_t registerIndex = 0;
+    size_t registerOffset = 0;
     if (isMemoryLine(pLine))
         return parseMemoryLine(pLine);
-    else if (isRegisterLine(pLine, &registerIndex))
-        return parseRegisterLine(pLine, registerIndex);
+    else if (isRegisterLine(pLine, &registerOffset))
+        return parseRegisterLine(pLine, registerOffset);
     else
         return parseOtherLine(pLine);
 }
@@ -277,50 +294,83 @@ static const char* parseValue(ParseResults* pResults, const char* pLine)
     return pNext;
 }
 
-static int isRegisterLine(const char* pLine, size_t* pRegisterIndex)
+static int isRegisterLine(const char* pLine, size_t* pRegisterOffset)
 {
     size_t i;
     struct
     {
         const char* pName;
-        size_t      index;
+        size_t      offset;
     } registers[] =
     {
-        { "r0             ", R0 },
-        { "r1             ", R1 },
-        { "r2             ", R2 },
-        { "r3             ", R3 },
-        { "r4             ", R4 },
-        { "r5             ", R5 },
-        { "r6             ", R6 },
-        { "r7             ", R7 },
-        { "r8             ", R8 },
-        { "r9             ", R9 },
-        { "r10            ", R10 },
-        { "r11            ", R11 },
-        { "r12            ", R12 },
-        { "sp             ", SP },
-        { "lr             ", LR },
-        { "pc             ", PC },
-        { "xpsr           ", XPSR }
+        { "r0             ", offsetof(RegisterContext, R[R0]) },
+        { "r1             ", offsetof(RegisterContext, R[R1]) },
+        { "r2             ", offsetof(RegisterContext, R[R2]) },
+        { "r3             ", offsetof(RegisterContext, R[R3]) },
+        { "r4             ", offsetof(RegisterContext, R[R4]) },
+        { "r5             ", offsetof(RegisterContext, R[R5]) },
+        { "r6             ", offsetof(RegisterContext, R[R6]) },
+        { "r7             ", offsetof(RegisterContext, R[R7]) },
+        { "r8             ", offsetof(RegisterContext, R[R8]) },
+        { "r9             ", offsetof(RegisterContext, R[R9]) },
+        { "r10            ", offsetof(RegisterContext, R[R10]) },
+        { "r11            ", offsetof(RegisterContext, R[R11]) },
+        { "r12            ", offsetof(RegisterContext, R[R12]) },
+        { "sp             ", offsetof(RegisterContext, R[SP]) },
+        { "lr             ", offsetof(RegisterContext, R[LR]) },
+        { "pc             ", offsetof(RegisterContext, R[PC]) },
+        { "xpsr           ", offsetof(RegisterContext, R[XPSR]) },
+        { "s0             ", offsetof(RegisterContext, FPR[S0]) },
+        { "s1             ", offsetof(RegisterContext, FPR[S1]) },
+        { "s2             ", offsetof(RegisterContext, FPR[S2]) },
+        { "s3             ", offsetof(RegisterContext, FPR[S3]) },
+        { "s4             ", offsetof(RegisterContext, FPR[S4]) },
+        { "s5             ", offsetof(RegisterContext, FPR[S5]) },
+        { "s6             ", offsetof(RegisterContext, FPR[S6]) },
+        { "s7             ", offsetof(RegisterContext, FPR[S7]) },
+        { "s8             ", offsetof(RegisterContext, FPR[S8]) },
+        { "s9             ", offsetof(RegisterContext, FPR[S9]) },
+        { "s10            ", offsetof(RegisterContext, FPR[S10]) },
+        { "s11            ", offsetof(RegisterContext, FPR[S11]) },
+        { "s12            ", offsetof(RegisterContext, FPR[S12]) },
+        { "s13            ", offsetof(RegisterContext, FPR[S13]) },
+        { "s14            ", offsetof(RegisterContext, FPR[S14]) },
+        { "s15            ", offsetof(RegisterContext, FPR[S15]) },
+        { "s16            ", offsetof(RegisterContext, FPR[S16]) },
+        { "s17            ", offsetof(RegisterContext, FPR[S17]) },
+        { "s18            ", offsetof(RegisterContext, FPR[S18]) },
+        { "s19            ", offsetof(RegisterContext, FPR[S19]) },
+        { "s20            ", offsetof(RegisterContext, FPR[S20]) },
+        { "s21            ", offsetof(RegisterContext, FPR[S21]) },
+        { "s22            ", offsetof(RegisterContext, FPR[S22]) },
+        { "s23            ", offsetof(RegisterContext, FPR[S23]) },
+        { "s24            ", offsetof(RegisterContext, FPR[S24]) },
+        { "s25            ", offsetof(RegisterContext, FPR[S25]) },
+        { "s26            ", offsetof(RegisterContext, FPR[S26]) },
+        { "s27            ", offsetof(RegisterContext, FPR[S27]) },
+        { "s28            ", offsetof(RegisterContext, FPR[S28]) },
+        { "s29            ", offsetof(RegisterContext, FPR[S29]) },
+        { "s30            ", offsetof(RegisterContext, FPR[S30]) },
+        { "s31            ", offsetof(RegisterContext, FPR[S31]) },
+        { "fpscr          ", offsetof(RegisterContext, FPR[FPSCR]) }
     };
 
     for (i = 0 ; i < ARRAY_SIZE(registers) ; i++)
     {
         if (0 == strncmp(registers[i].pName, pLine, 15))
         {
-            *pRegisterIndex = registers[i].index;
+            *pRegisterOffset  = registers[i].offset;
             return TRUE;
         }
     }
     return FALSE;
 }
 
-static ParseResults parseRegisterLine(const char* pLine, size_t registerIndex)
+static ParseResults parseRegisterLine(const char* pLine, size_t registerOffset)
 {
     ParseResults results;
     results.type = TYPE_REGISTER;
-    results.registerIndex = registerIndex;
+    results.registerOffset = registerOffset;
 
     // Register value is found after 15 character long register name field.
     results.registerValue = strtoul(&pLine[15], NULL, 0);

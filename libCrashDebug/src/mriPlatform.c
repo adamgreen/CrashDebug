@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -11,6 +11,7 @@
     GNU General Public License for more details.
 */
 #include <common.h>
+#include <CrashCatcher.h>
 #include <gdb_console.h>
 #include <IMemory.h>
 #include <signal.h>
@@ -79,6 +80,50 @@ static const char g_targetXML[] =
     "</feature>\n"
     "</target>\n";
 
+static const char g_targetFpuXML[] =
+    "<?xml version=\"1.0\"?>\n"
+    "<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">\n"
+    "<target>\n"
+    "<feature name=\"org.gnu.gdb.arm.m-profile\">\n"
+    "<reg name=\"r0\" bitsize=\"32\"/>\n"
+    "<reg name=\"r1\" bitsize=\"32\"/>\n"
+    "<reg name=\"r2\" bitsize=\"32\"/>\n"
+    "<reg name=\"r3\" bitsize=\"32\"/>\n"
+    "<reg name=\"r4\" bitsize=\"32\"/>\n"
+    "<reg name=\"r5\" bitsize=\"32\"/>\n"
+    "<reg name=\"r6\" bitsize=\"32\"/>\n"
+    "<reg name=\"r7\" bitsize=\"32\"/>\n"
+    "<reg name=\"r8\" bitsize=\"32\"/>\n"
+    "<reg name=\"r9\" bitsize=\"32\"/>\n"
+    "<reg name=\"r10\" bitsize=\"32\"/>\n"
+    "<reg name=\"r11\" bitsize=\"32\"/>\n"
+    "<reg name=\"r12\" bitsize=\"32\"/>\n"
+    "<reg name=\"sp\" bitsize=\"32\" type=\"data_ptr\"/>\n"
+    "<reg name=\"lr\" bitsize=\"32\"/>\n"
+    "<reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
+    "<reg name=\"xpsr\" bitsize=\"32\" regnum=\"25\"/>\n"
+    "</feature>\n"
+    "<feature name=\"org.gnu.gdb.arm.vfp\">\n"
+    "<reg name=\"d0\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d1\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d2\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d3\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d4\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d5\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d6\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d7\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d8\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d9\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d10\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d11\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d12\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d13\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d14\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"d15\" bitsize=\"64\" type=\"ieee_double\"/>\n"
+    "<reg name=\"fpscr\" bitsize=\"32\" type=\"int\" group=\"float\"/>\n"
+    "</feature>\n"
+    "</target>\n";
+
 
 /* Addresses of fault status registers in System Control Block. */
 #define CFSR  0xE000ED28
@@ -105,6 +150,7 @@ static void displayBusFaultCauseToGdbConsole(void);
 static void displayUsageFaultCauseToGdbConsole(void);
 static void sendRegisterForTResponse(Buffer* pBuffer, uint8_t registerOffset, uint32_t registerValue);
 static void writeBytesToBufferAsHex(Buffer* pBuffer, void* pBytes, size_t byteCount);
+static int hasFPURegisters();
 static void readBytesFromBufferAsHex(Buffer* pBuffer, void* pBytes, size_t byteCount);
 
 
@@ -543,11 +589,20 @@ static void writeBytesToBufferAsHex(Buffer* pBuffer, void* pBytes, size_t byteCo
 void Platform_CopyContextToBuffer(Buffer* pBuffer)
 {
     writeBytesToBufferAsHex(pBuffer, g_pContext->R, sizeof(g_pContext->R));
+    if (hasFPURegisters())
+        writeBytesToBufferAsHex(pBuffer, g_pContext->FPR, sizeof(g_pContext->FPR));
+}
+
+static int hasFPURegisters()
+{
+    return g_pContext->flags & CRASH_CATCHER_FLAGS_FLOATING_POINT;
 }
 
 void Platform_CopyContextFromBuffer(Buffer* pBuffer)
 {
     readBytesFromBufferAsHex(pBuffer, g_pContext->R, sizeof(g_pContext->R));
+    if (hasFPURegisters())
+        readBytesFromBufferAsHex(pBuffer, g_pContext->FPR, sizeof(g_pContext->FPR));
 }
 
 static void readBytesFromBufferAsHex(Buffer* pBuffer, void* pBytes, size_t byteCount)
@@ -571,12 +626,18 @@ const char* Platform_GetDeviceMemoryMapXml(void)
 
 uint32_t Platform_GetTargetXmlSize(void)
 {
-    return sizeof(g_targetXML) - 1;
+    if (hasFPURegisters())
+        return sizeof(g_targetFpuXML) - 1;
+    else
+        return sizeof(g_targetXML) - 1;
 }
 
 const char* Platform_GetTargetXml(void)
 {
-    return g_targetXML;
+    if (hasFPURegisters())
+        return g_targetFpuXML;
+    else
+        return g_targetXML;
 }
 
 __throws void Platform_SetHardwareBreakpoint(uint32_t address, uint32_t kind)

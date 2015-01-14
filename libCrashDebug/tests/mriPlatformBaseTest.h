@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -62,8 +62,8 @@ protected:
         MemorySim_CreateRegionsFromFlashImage(m_pMemory, flashImage, sizeof(flashImage));
         mriPlatform_Init(&m_context, m_pMemory);
 
-        /* Setup to buffer a maximum of 1024 characters sent by MRI. */
-        mockIComm_InitTransmitDataBuffer(1024);
+        /* Setup to buffer a maximum of 2048 characters sent by MRI. */
+        mockIComm_InitTransmitDataBuffer(2048);
 
         /* Setup to buffer a maxmimum of 256 characters used with printf() calls. */
         printfSpy_Hook(256);
