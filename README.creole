@@ -26,9 +26,6 @@ A developer just needs these things to conduct post-mortem debugging:
 ** See [[https://github.com/adamgreen/CrashDebug#crash-dump-generation | this section]] to learn how to obtain these
    crash dumps.
 
-**Note:** //CrashDebug doesn't currently capture the floating point state on Cortex-M4F processors.  This feature will
-be added in the near future.//
-
 
 ==How to Clone
 This project uses submodules (ie. MRI and CrashCatcher).  Cloning therefore requires a few more steps to get all of the
