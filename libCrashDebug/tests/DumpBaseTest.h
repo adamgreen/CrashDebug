@@ -42,7 +42,7 @@ struct DumpFPFileTop : public DumpFileTop
 };
 
 
-class CrashCatcherBaseTest : public Utest
+class DumpBaseTest : public Utest
 {
 protected:
     IMemory*        m_pMem;

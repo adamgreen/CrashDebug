@@ -17,16 +17,16 @@ extern "C"
     #include <GdbLogParser.h>
 }
 
-#include "CrashCatcherBaseTest.h"
+#include "DumpBaseTest.h"
 
 
 #define DUMMY_FILE_HANDLE (FILE*)1
 
-TEST_GROUP_BASE(GdbLogParser, CrashCatcherBaseTest)
+TEST_GROUP_BASE(GdbLogParser, DumpBaseTest)
 {
     void setup()
     {
-        CrashCatcherBaseTest::setup();
+        DumpBaseTest::setup();
         fakeLogFileAccess();
     }
 
@@ -39,7 +39,7 @@ TEST_GROUP_BASE(GdbLogParser, CrashCatcherBaseTest)
 
     void teardown()
     {
-        CrashCatcherBaseTest::teardown();
+        DumpBaseTest::teardown();
         fopenRestore();
         fcloseRestore();
         fseekRestore();
