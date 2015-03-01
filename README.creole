@@ -1,5 +1,3 @@
-==Work in Progress!
-
 ==Table of Contents
 [[https://github.com/adamgreen/CrashDebug#overview | Overview]] \\
 [[https://github.com/adamgreen/CrashDebug#how-to-clone | How to Clone]] \\
