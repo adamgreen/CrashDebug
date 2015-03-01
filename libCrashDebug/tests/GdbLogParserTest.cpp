@@ -440,8 +440,10 @@ TEST(GdbLogParser, HaveAllIntegerAndFloatingPointRegisters_ShouldReturnNoRegions
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
     for (int i = 0 ; i < 32 ; i++)
     {
-        float val = (float)i;
-        m_expectedRegisters.FPR[i] = *(uint32_t*)&val;
+        float    floatVal = (float)i;
+        uint32_t val;
+        memcpy(&val, &floatVal, sizeof(val));
+        m_expectedRegisters.FPR[i] = val;
     }
     m_expectedRegisters.FPR[FPSCR] = 1;
 }

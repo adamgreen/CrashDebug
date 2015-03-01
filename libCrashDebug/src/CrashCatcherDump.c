@@ -133,7 +133,7 @@ static void readFlags(Object* pObject)
 
 static void readIntegerRegisters(Object* pObject)
 {
-    static const integerContextSize = offsetof(RegisterContext, FPR) - offsetof(RegisterContext, R);
+    static const int integerContextSize = offsetof(RegisterContext, FPR) - offsetof(RegisterContext, R);
     int result = pObject->read(pObject, pObject->pContext->R, integerContextSize);
     if (result != integerContextSize)
         __throw(fileFormatException);
