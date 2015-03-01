@@ -397,37 +397,37 @@ TEST(GdbLogParser, HaveAllIntegerAndFloatingPointRegisters_ShouldReturnNoRegions
                                        "xpsr           0xf00df00d",
                                        "fpscr          0x1	1",
                                        "s0             0	(raw 0x00000000)",
-                                       "s1             1",
-                                       "s2             2",
-                                       "s3             3",
-                                       "s4             4",
-                                       "s5             5",
-                                       "s6             6",
-                                       "s7             7",
-                                       "s8             8",
-                                       "s9             9",
-                                       "s10            10",
-                                       "s11            11",
-                                       "s12            12",
-                                       "s13            13",
-                                       "s14            14",
-                                       "s15            15",
-                                       "s16            16",
-                                       "s17            17",
-                                       "s18            18",
-                                       "s19            19",
-                                       "s20            20",
-                                       "s21            21",
-                                       "s22            22",
-                                       "s23            23",
-                                       "s24            24",
-                                       "s25            25",
-                                       "s26            26",
-                                       "s27            27",
-                                       "s28            28",
-                                       "s29            29",
-                                       "s30            30",
-                                       "s31            31"
+                                       "s1             1	(raw 0x3f800000)",
+                                       "s2             2	(raw 0x40000000)",
+                                       "s3             3	(raw 0x40400000)",
+                                       "s4             4	(raw 0x40800000)",
+                                       "s5             5	(raw 0x40a00000)",
+                                       "s6             6	(raw 0x40c00000)",
+                                       "s7             7	(raw 0x40e00000)",
+                                       "s8             8	(raw 0x41000000)",
+                                       "s9             9	(raw 0x41100000)",
+                                       "s10            10	(raw 0x41200000)",
+                                       "s11            11	(raw 0x41300000)",
+                                       "s12            12	(raw 0x41400000)",
+                                       "s13            13	(raw 0x41500000)",
+                                       "s14            14	(raw 0x41600000)",
+                                       "s15            15	(raw 0x41700000)",
+                                       "s16            16	(raw 0x41800000)",
+                                       "s17            17	(raw 0x41880000)",
+                                       "s18            18	(raw 0x41900000)",
+                                       "s19            19	(raw 0x41980000)",
+                                       "s20            20	(raw 0x41a00000)",
+                                       "s21            21	(raw 0x41a80000)",
+                                       "s22            22	(raw 0x41b00000)",
+                                       "s23            23	(raw 0x41b80000)",
+                                       "s24            24	(raw 0x41c00000)",
+                                       "s25            25	(raw 0x41c80000)",
+                                       "s26            26	(raw 0x41d00000)",
+                                       "s27            27	(raw 0x41d80000)",
+                                       "s28            28	(raw 0x41e00000)",
+                                       "s29            29	(raw 0x41e80000)",
+                                       "s30            30	(raw 0x41f00000)",
+                                       "s31            31	(raw 0x41f80000)"
                                        };
 
     fgetsSetData(testLines, ARRAY_SIZE(testLines));
@@ -439,6 +439,25 @@ TEST(GdbLogParser, HaveAllIntegerAndFloatingPointRegisters_ShouldReturnNoRegions
         m_expectedRegisters.R[i] = 0x11111111 * i;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
     for (int i = 0 ; i < 32 ; i++)
-        m_expectedRegisters.FPR[i] = i;
+    {
+        float val = (float)i;
+        m_expectedRegisters.FPR[i] = *(uint32_t*)&val;
+    }
     m_expectedRegisters.FPR[FPSCR] = 1;
+}
+
+TEST(GdbLogParser, FloatingPointValueWithMissingRawValue_ShouldSetRegisterToNegativeOne)
+{
+    static const char* xmlForEmptyRegions = "<?xml version=\"1.0\"?>"
+                                            "<!DOCTYPE memory-map PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\" \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
+                                            "<memory-map>"
+                                            "</memory-map>";
+    static const char* testLines[] = { "s0             55" };
+
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
+        GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
+    const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
+    STRCMP_EQUAL(xmlForEmptyRegions, pMemoryLayout);
+    m_expectedRegisters.flags = CRASH_CATCHER_FLAGS_FLOATING_POINT;
+    m_expectedRegisters.FPR[0] = -1;
 }

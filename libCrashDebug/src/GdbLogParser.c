@@ -80,6 +80,8 @@ static const char* skipSymbol(const char* pLine);
 static const char* parseValue(ParseResults* pResults, const char* pLine);
 static int isRegisterLine(const char* pLine, size_t* pRegisterOffset);
 static ParseResults parseRegisterLine(const char* pLine, size_t registerOffset);
+static uint32_t parseFloatRegisterLine(const char* pLine);
+static const char* findWhitespace(const char* pLine);
 static ParseResults parseOtherLine(const char* pLine);
 static void rewindLogFileAndThrowOnError(FILE* pLogFile);
 
@@ -151,7 +153,7 @@ static void firstPassRegisterHandler(ParseObject* pObject, const ParseResults* p
 static int isFloatingPointRegister(size_t registerOffset)
 {
     return registerOffset >= offsetof(RegisterContext, FPR[S0]) &&
-           registerOffset <= offsetof(RegisterContext, FPR[FPSCR]);
+           registerOffset <= offsetof(RegisterContext, FPR[S31]);
 }
 
 static void secondPassHandler(ParseObject* pObject, const ParseResults* pParseResults)
@@ -372,9 +374,38 @@ static ParseResults parseRegisterLine(const char* pLine, size_t registerOffset)
     results.type = TYPE_REGISTER;
     results.registerOffset = registerOffset;
 
-    // Register value is found after 15 character long register name field.
-    results.registerValue = strtoul(&pLine[15], NULL, 0);
+    if (isFloatingPointRegister(registerOffset))
+    {
+        results.registerValue = parseFloatRegisterLine(pLine);
+    }
+    else
+    {
+        // Register value is found after 15 character long register name field.
+        results.registerValue = strtoul(&pLine[15], NULL, 0);
+    }
     return results;
+}
+
+static uint32_t parseFloatRegisterLine(const char* pLine)
+{
+    // Floating point  lines haves following format and we want to use the raw hexadecimal value.
+    // "s1             1	(raw 0x3f800000)"
+
+    // The two values start after the 15 character long register name field.
+    // Skip over the first value to find the start of the raw value.
+    pLine = findWhitespace(&pLine[15]);
+    pLine = skipWhitespace(pLine);
+
+    if (strncmp(pLine, "(raw ", 5) != 0)
+        return -1;
+    return strtoul(&pLine[5], NULL, 0);
+}
+
+static const char* findWhitespace(const char* pLine)
+{
+    while (*pLine && !isspace(*pLine))
+        pLine++;
+    return pLine;
 }
 
 static ParseResults parseOtherLine(const char* pLine)
