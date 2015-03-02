@@ -50,6 +50,9 @@ git submodule update
 
 
 == How to Build
+If you don't want to build the CrashDebug utility yourself, you can use the pre-built binaries (OS X, Windows, and
+Ubuntu) for CrashDebug that can be found at [[https://github.com/adamgreen/CrashDebug/tree/master/bins]].
+
 === Toolchain
 You will need a **gcc** or **clang** toolchain appropriate for your platform:
 * **OS X**: [[https://developer.apple.com/xcode/downloads/ | Xcode]] and
