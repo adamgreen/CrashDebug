@@ -28,7 +28,7 @@ TEST_GROUP_BASE(CrashCatcherBinaryDump, DumpBaseTest)
 
     void createTestDumpFile(const void* pData, size_t dataSize)
     {
-        FILE* pFile = fopen(m_pTestFilename, "w");
+        FILE* pFile = fopen(m_pTestFilename, "wb");
         fwrite(pData, 1, dataSize, pFile);
         fclose(pFile);
     }
