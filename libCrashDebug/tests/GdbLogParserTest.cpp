@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -107,6 +107,22 @@ TEST(GdbLogParser, OneLineLogFile_1RamValue_ShouldReturn1WordRegion)
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
     CHECK_EQUAL(0x11111111, IMemory_Read32(m_pMem, 0x10000000));
+}
+
+TEST(GdbLogParser, OneLineLogFile_1RamValueWithMixedCaseHexDigits_ShouldReturn1WordRegion)
+{
+    static const char* xmlForMemory = "<?xml version=\"1.0\"?>"
+                                      "<!DOCTYPE memory-map PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\" \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
+                                      "<memory-map>"
+                                      "<memory type=\"ram\" start=\"0xABCDEF00\" length=\"0x4\"></memory>"
+                                      "</memory-map>";
+    static const char* testLines[] = { "0xAbCdEf00:\t0x11111111" };
+
+    fgetsSetData(testLines, ARRAY_SIZE(testLines));
+        GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
+    const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
+    STRCMP_EQUAL(xmlForMemory, pMemoryLayout);
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_pMem, 0xABCDEF00));
 }
 
 TEST(GdbLogParser, OneLineLogFile_4RamValues_ShouldReturn4WordRegion)
