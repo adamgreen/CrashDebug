@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -137,6 +137,7 @@ static IMemory*         g_pMemory;
 static IComm*           g_pComm;
 static char             g_packetBuffer[16 * 1024];
 static int              g_memoryFaultEncountered;
+static int              g_shouldWaitForGdbConnect = TRUE;
 
 
 /* Core MRI function not exposed in public header since typically called by ASM. */
@@ -170,6 +171,15 @@ void mriPlatform_Run(IComm* pComm)
     {
         __mriDebugException();
     } while (!IComm_ShouldStopRun(pComm));
+}
+
+/* This routine is just used for unit testing so that it can run tests where a T response packet and/or exception
+   information returned to GDB is expected.  This only happens on first mriPlatform_Run() when it doesn't need to wait 
+   for GDB connection. 
+*/
+void mriPlatform_setWaitForGdbConnect(int setting)
+{
+    g_shouldWaitForGdbConnect = setting;
 }
 
 
@@ -278,7 +288,7 @@ void Platform_CommClearInterrupt(void)
 
 int Platform_CommShouldWaitForGdbConnect(void)
 {
-    return FALSE;
+    return g_shouldWaitForGdbConnect;
 }
 
 int Platform_CommSharingWithApplication(void)

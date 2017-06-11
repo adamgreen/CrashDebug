@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -17,6 +17,7 @@ extern "C"
     #include <common.h>
     #include <MemorySim.h>
     #include <mriPlatform.h>
+    #include <mriPlatformPriv.h>
     #include <posix4win.h>
     #include <printfSpy.h>
     #include <signal.h>
@@ -61,6 +62,11 @@ protected:
         m_pMemory = MemorySim_Init();
         MemorySim_CreateRegionsFromFlashImage(m_pMemory, flashImage, sizeof(flashImage));
         mriPlatform_Init(&m_context, m_pMemory);
+
+        /* Default most tests to running where they don't need to wait for GDB to connect. This makes it easier to
+           run several of the tests and requires less rewrite of others since I changed the default for this over
+           time. */
+        mriPlatform_setWaitForGdbConnect(FALSE);
 
         /* Setup to buffer a maximum of 2048 characters sent by MRI. */
         mockIComm_InitTransmitDataBuffer(2048);

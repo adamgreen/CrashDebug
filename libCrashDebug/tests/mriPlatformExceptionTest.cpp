@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -643,6 +643,20 @@ TEST(mriPlatformException, SetExceptionCodeToHardFault_ForceToUsageFault_Unalign
     appendExpectedOPacket("\n    Unaligned Access");
     appendExpectedOPacket("\n");
     appendExpectedTPacket(SIGSEGV, 0xCCCCCCCC, INITIAL_SP, INITIAL_LR, INITIAL_PC);
+    appendExpectedString("+");
+    STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
+    CHECK_EQUAL(INITIAL_PC, m_context.R[PC]);
+}
+
+TEST(mriPlatformException, SetExceptionCodeToHardFault_ForceToUsageFault_UnalignedAccess_WithGdbWaitVerifyNoOutput)
+{
+    uint32_t ExceptionCode = 3;
+    mriPlatform_setWaitForGdbConnect(TRUE);
+    setIPSR(ExceptionCode);
+    setFaultRegister(HFSR, 1 << 30);
+    setFaultRegister(CFSR, 1 << (8 + 16));
+    mockIComm_InitReceiveChecksummedData("+$c#");
+        mriPlatform_Run(mockIComm_Get());
     appendExpectedString("+");
     STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
     CHECK_EQUAL(INITIAL_PC, m_context.R[PC]);

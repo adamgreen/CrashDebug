@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -31,12 +31,14 @@ static ICommVTable g_icommVTable = {hasReceiveData, receiveChar, sendChar, shoul
 static struct StandardIComm
 {
     ICommVTable* pVTable;
-} g_comm = {&g_icommVTable};
+    int          hasGdbConnected;
+} g_comm = {&g_icommVTable, FALSE};
 
 
 __throws IComm* StandardIComm_Init()
 {
     StandardIComm* pThis = &g_comm;
+    pThis->hasGdbConnected = FALSE;
     return (IComm*)pThis;
 }
 
@@ -66,7 +68,10 @@ static int hasReceiveData(IComm* pComm)
 
 static int receiveChar(IComm* pComm)
 {
-    return Console_ReadStdIn();
+    StandardIComm* pThis = (StandardIComm*)pComm;
+    int c = Console_ReadStdIn();
+    pThis->hasGdbConnected = TRUE;
+    return c;
 }
 
 static void sendChar(IComm* pComm, int character)
@@ -81,6 +86,7 @@ static int shouldStopRun(IComm* pComm)
 
 static int  isGdbConnected(IComm* pComm)
 {
-    return TRUE;
+    StandardIComm* pThis = (StandardIComm*)pComm;
+    return pThis->hasGdbConnected || hasReceiveData(pComm);
 }
 

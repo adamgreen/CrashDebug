@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -99,8 +99,24 @@ TEST(StandardIComm, SendChar_VerifySuccessfullySentBytes)
     STRCMP_EQUAL("xyz", ConsoleMock_WriteStdOut_GetCapturedText());
 }
 
-
-TEST(StandardIComm, IsGdbConnected_ShouldReturnTrue)
+TEST(StandardIComm, IsGdbConnected_ShouldReturnFalse)
 {
+    CHECK_FALSE(IComm_IsGdbConnected(m_pComm));
+}
+
+TEST(StandardIComm, IsGdbConnected_ShouldReturnTrueOnceHasRecieveData)
+{
+    CHECK_FALSE(IComm_IsGdbConnected(m_pComm));
+        ConsoleMock_HasStdInDataToRead_SetReturn(1);
+    CHECK_TRUE(IComm_IsGdbConnected(m_pComm));
+}
+
+TEST(StandardIComm, IsGdbConnected_ShouldReturnTrueOnceOneByteHasBeenRead)
+{
+    CHECK_FALSE(IComm_IsGdbConnected(m_pComm));
+        ConsoleMock_ReadStdIn_SetBuffer("+", 1);
+    CHECK_FALSE(IComm_IsGdbConnected(m_pComm));
+        char c = IComm_ReceiveChar(m_pComm);
+        CHECK_EQUAL('+', c);
     CHECK_TRUE(IComm_IsGdbConnected(m_pComm));
 }
