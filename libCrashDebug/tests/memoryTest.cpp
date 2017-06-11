@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -102,36 +102,36 @@ TEST(memoryTests, WriteWord)
     CHECK_EQUAL(0xBAADF00D, IMemory_Read32(m_pMemory, INITIAL_SP - 4));
 }
 
-TEST(memoryTests, ReadByte_InvalidAddress_ShouldSendNoDataBack)
+TEST(memoryTests, ReadByte_InvalidAddress_ShouldSendErrorBack)
 {
     char command[64];
     snprintf(command, sizeof(command), "+$m%x,1#", INITIAL_SP);
     mockIComm_InitReceiveChecksummedData(command, "+$c#");
         mriPlatform_Run(mockIComm_Get());
     appendExpectedTPacket(SIGTRAP, 0xCCCCCCCC, INITIAL_SP, INITIAL_LR, INITIAL_PC);
-    appendExpectedString("+$#+");
+    appendExpectedString("+$E03#+");
     STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
 }
 
-TEST(memoryTests, ReadHalfWord_InvalidAddress_ShouldSendNoDataBack)
+TEST(memoryTests, ReadHalfWord_InvalidAddress_ShouldSendErrorBack)
 {
     char command[64];
     snprintf(command, sizeof(command), "+$m%x,2#", INITIAL_SP);
     mockIComm_InitReceiveChecksummedData(command, "+$c#");
         mriPlatform_Run(mockIComm_Get());
     appendExpectedTPacket(SIGTRAP, 0xCCCCCCCC, INITIAL_SP, INITIAL_LR, INITIAL_PC);
-    appendExpectedString("+$#+");
+    appendExpectedString("+$E03#+");
     STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
 }
 
-TEST(memoryTests, ReadWord_InvalidAddress_ShouldSendNoDataBack)
+TEST(memoryTests, ReadWord_InvalidAddress_ShouldSendErrorBack)
 {
     char command[64];
     snprintf(command, sizeof(command), "+$m%x,4#", INITIAL_SP);
     mockIComm_InitReceiveChecksummedData(command, "+$c#");
         mriPlatform_Run(mockIComm_Get());
     appendExpectedTPacket(SIGTRAP, 0xCCCCCCCC, INITIAL_SP, INITIAL_LR, INITIAL_PC);
-    appendExpectedString("+$#+");
+    appendExpectedString("+$E03#+");
     STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
 }
 
