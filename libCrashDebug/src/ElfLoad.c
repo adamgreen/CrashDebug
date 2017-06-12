@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -33,9 +33,9 @@ static LoadObject initLoadObject(const char* pBlob, size_t blobSize);
 static SizedBlob initSizedBlob(const char* pBlob, size_t blobSize);
 static const void* fetchSizedByteArray(const SizedBlob* pBlob, uint32_t offset, uint32_t size);
 static void validateElfHeaderContents(const Elf32_Ehdr* pHeader);
-static void loadReadOnlyLoadableEntries(IMemory* pMemory, LoadObject* pObject);
-static void loadIfReadOnlyLoadableEntry(IMemory* pMemory, LoadObject* pObject, const Elf32_Phdr* pPgmHeader);
-static int isReadOnlyLoadableEntry(const Elf32_Phdr* pHeader);
+static void loadFlashLoadableEntries(IMemory* pMemory, LoadObject* pObject);
+static void loadIfFlashLoadableEntry(IMemory* pMemory, LoadObject* pObject, const Elf32_Phdr* pPgmHeader);
+static int isFlashLoadableEntry(const Elf32_Phdr* pHeader);
 
 
 __throws void ElfLoad_FromMemory(IMemory* pMemory, const void* pElf, size_t elfSize)
@@ -43,7 +43,7 @@ __throws void ElfLoad_FromMemory(IMemory* pMemory, const void* pElf, size_t elfS
     LoadObject object = initLoadObject(pElf, elfSize);
 
     validateElfHeaderContents(object.pElfHeader);
-    loadReadOnlyLoadableEntries(pMemory, &object);
+    loadFlashLoadableEntries(pMemory, &object);
     if (object.entryLoadCount == 0)
         __throw(elfFormatException);
 }
@@ -86,7 +86,7 @@ static void validateElfHeaderContents(const Elf32_Ehdr* pHeader)
     }
 }
 
-static void loadReadOnlyLoadableEntries(IMemory* pMemory, LoadObject* pObject)
+static void loadFlashLoadableEntries(IMemory* pMemory, LoadObject* pObject)
 {
     const Elf32_Phdr*   pPgmHeader = NULL;
     Elf32_Half          i = 0;
@@ -94,29 +94,28 @@ static void loadReadOnlyLoadableEntries(IMemory* pMemory, LoadObject* pObject)
     for (i = 0, pObject->pgmHeaderOffset = pObject->pElfHeader->e_phoff ; i < pObject->pElfHeader->e_phnum ; i++)
     {
         pPgmHeader = fetchSizedByteArray(&pObject->sizedBlob, pObject->pgmHeaderOffset, sizeof(*pPgmHeader));
-        loadIfReadOnlyLoadableEntry(pMemory, pObject, pPgmHeader);
+        loadIfFlashLoadableEntry(pMemory, pObject, pPgmHeader);
         pObject->pgmHeaderOffset += pObject->pElfHeader->e_phentsize;
     }
 }
 
-static void loadIfReadOnlyLoadableEntry(IMemory* pMemory, LoadObject* pObject, const Elf32_Phdr* pPgmHeader)
+static void loadIfFlashLoadableEntry(IMemory* pMemory, LoadObject* pObject, const Elf32_Phdr* pPgmHeader)
 {
     const void* pData = NULL;
 
-    if (!isReadOnlyLoadableEntry(pPgmHeader))
+    if (!isFlashLoadableEntry(pPgmHeader))
         return;
 
     pData = fetchSizedByteArray(&pObject->sizedBlob, pPgmHeader->p_offset, pPgmHeader->p_filesz);
-    MemorySim_CreateRegion(pMemory, pPgmHeader->p_vaddr, pPgmHeader->p_memsz);
-    MemorySim_LoadFromFlashImage(pMemory, pPgmHeader->p_vaddr, pData, pPgmHeader->p_filesz);
-    MemorySim_MakeRegionReadOnly(pMemory, pPgmHeader->p_vaddr);
+    MemorySim_CreateRegion(pMemory, pPgmHeader->p_paddr, pPgmHeader->p_memsz);
+    MemorySim_LoadFromFlashImage(pMemory, pPgmHeader->p_paddr, pData, pPgmHeader->p_filesz);
+    MemorySim_MakeRegionReadOnly(pMemory, pPgmHeader->p_paddr);
     pObject->entryLoadCount++;
 }
 
-static int isReadOnlyLoadableEntry(const Elf32_Phdr* pHeader)
+static int isFlashLoadableEntry(const Elf32_Phdr* pHeader)
 {
     return (pHeader->p_type == PT_LOAD &&
-            (pHeader->p_flags & PF_W) == 0 &&
             pHeader->p_filesz != 0 &&
             pHeader->p_memsz >= pHeader->p_filesz);
 }

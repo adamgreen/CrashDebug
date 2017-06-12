@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -192,7 +192,6 @@ TEST_GROUP(CrashDebugCommandLine)
         initPgmHeader(&pElfFile->pgmHeader);
         pElfFile->data[0] = g_imageData[0];
         pElfFile->data[1] = g_imageData[1];
-
     }
 
     void initElfHeader(Elf32_Ehdr* pHeader)
@@ -573,7 +572,7 @@ TEST(CrashDebugCommandLine, ValidElfAndDumpFilenames_DifferentBaseAddress_Valida
     addArg("--dump");
     addArg(g_dumpFilename);
     initElfFile();
-    m_elfFile.pgmHeader.p_vaddr = 0x4000;
+    m_elfFile.pgmHeader.p_paddr = 0x4000;
     createTestFiles();
         CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
     CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00004000));

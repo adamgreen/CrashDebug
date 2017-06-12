@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -201,16 +201,6 @@ TEST(ElfLoad, NoPageEntryIsLoadable_ShouldThrow)
     clearExceptionCode();
 }
 
-TEST(ElfLoad, NoPageEntryIsReadOnly_ShouldThrow)
-{
-    ElfFile1 testElf;
-    initElfFile(&testElf);
-    testElf.pgmHeader.p_flags |= PF_W;
-        __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
-    CHECK_EQUAL(elfFormatException, getExceptionCode());
-    clearExceptionCode();
-}
-
 TEST(ElfLoad, NoPageEntryHasNonZeroFileSize_ShouldThrow)
 {
     ElfFile1 testElf;
@@ -260,14 +250,34 @@ TEST(ElfLoad, LoadFromFirstAndOnlyProgramHeaderEntry_ValidateMemoryContents)
     CHECK_EQUAL(0x00000100, IMemory_Read32(m_pMemory, 4));
 }
 
-TEST(ElfLoad, NonZeroVirtualAddressForLoad_ValidateMemoryContents)
+TEST(ElfLoad, NonZeroPhysicalAddressDifferentThanZeroVirtualAddress_ValidateMemoryContents)
 {
     ElfFile1 testElf;
     initElfFile(&testElf);
-    testElf.pgmHeader.p_vaddr = 0x10000000;
+    testElf.pgmHeader.p_paddr = 0x10000000;
         ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf));
     CHECK_EQUAL(0x10008000, IMemory_Read32(m_pMemory, 0x10000000));
     CHECK_EQUAL(0x00000100, IMemory_Read32(m_pMemory, 0x10000004));
+}
+
+TEST(ElfLoad, WriteablePageEntry_ValidateMemoryContents)
+{
+    ElfFile1 testElf;
+    initElfFile(&testElf);
+    testElf.pgmHeader.p_flags |= PF_W;
+        ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf));
+    CHECK_EQUAL(0x10008000, IMemory_Read32(m_pMemory, 0));
+    CHECK_EQUAL(0x00000100, IMemory_Read32(m_pMemory, 4));
+}
+
+TEST(ElfLoad, ReadOnlyNonExecutablePageEntry_ValidateMemoryContents)
+{
+    ElfFile1 testElf;
+    initElfFile(&testElf);
+    testElf.pgmHeader.p_flags &= ~PF_X;
+        ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf));
+    CHECK_EQUAL(0x10008000, IMemory_Read32(m_pMemory, 0));
+    CHECK_EQUAL(0x00000100, IMemory_Read32(m_pMemory, 4));
 }
 
 TEST(ElfLoad, FileSizeSmallerThanMemSize_ValidateMemoryContents_ShouldZeroExtraWord)
