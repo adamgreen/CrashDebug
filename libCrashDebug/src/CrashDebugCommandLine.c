@@ -205,7 +205,7 @@ static FileData loadFileData(const char* pFilename)
 {
     FILE* volatile pFile = NULL;
     char* volatile pBuffer = NULL;
-    long           fileSize = 0;
+    volatile long  fileSize = 0;
     FileData       fileData;
 
     __try

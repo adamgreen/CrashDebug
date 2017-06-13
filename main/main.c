@@ -19,8 +19,8 @@
 
 int main(int argc, const char** argv)
 {
-    int                   returnValue = 0;
-    IComm*                pComm = NULL;
+    volatile int          returnValue = 0;
+    IComm* volatile       pComm = NULL;
     CrashDebugCommandLine commandLine;
 
     __try

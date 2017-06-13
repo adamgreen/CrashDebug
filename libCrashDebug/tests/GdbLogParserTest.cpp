@@ -451,7 +451,7 @@ TEST(GdbLogParser, HaveAllIntegerAndFloatingPointRegisters_ShouldReturnNoRegions
     const char* pMemoryLayout = MemorySim_GetMemoryMapXML(m_pMem);
     STRCMP_EQUAL(xmlForEmptyRegions, pMemoryLayout);
     m_expectedRegisters.flags = CRASH_CATCHER_FLAGS_FLOATING_POINT;
-    for (int i = 0 ; i < 16 ; i++)
+    for (uint32_t i = 0 ; i < 16 ; i++)
         m_expectedRegisters.R[i] = 0x11111111 * i;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
     for (int i = 0 ; i < 32 ; i++)

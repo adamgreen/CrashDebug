@@ -375,7 +375,7 @@ static void displayHardFaultCauseToGdbConsole(void)
     static const uint32_t debugEventBit = 1 << 31;
     static const uint32_t forcedBit = 1 << 30;
     static const uint32_t vectorTableReadBit = 1 << 1;
-    uint32_t              hardFaultStatusRegister = 0;
+    volatile uint32_t     hardFaultStatusRegister = 0;
 
     WriteStringToGdbConsole("\n**Hard Fault**");
 
@@ -505,7 +505,7 @@ static void displayUsageFaultCauseToGdbConsole(void)
     static const uint32_t invalidPCBit = 1 << 2;
     static const uint32_t invalidStateBit = 1 << 1;
     static const uint32_t undefinedInstructionBit = 1;
-    uint32_t              usageFaultStatusRegister = 0;
+    volatile uint32_t     usageFaultStatusRegister = 0;
 
     /* Make sure that there is a usage fault to display. */
     __try

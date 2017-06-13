@@ -32,7 +32,7 @@ TEST_GROUP_BASE(registerTests, mriPlatformBase)
 
 TEST(registerTests, ReadRegisters)
 {
-    for (int i = 0 ; i < 15 ; i++)
+    for (uint32_t i = 0 ; i < 15 ; i++)
         m_context.R[i] = 0x11111111 * i;
     m_context.R[PC] = 0xFFFFFFFE;
 
@@ -50,7 +50,7 @@ TEST(registerTests, ReadRegisters)
 TEST(registerTests, ReadIntegerAndFloatRegisters)
 {
     m_context.flags = CRASH_CATCHER_FLAGS_FLOATING_POINT;
-    for (int i = 0 ; i < 15 ; i++)
+    for (uint32_t i = 0 ; i < 15 ; i++)
         m_context.R[i] = 0x11111111 * i;
     m_context.R[PC] = 0xFFFFFFFE;
     for (int i = 0 ; i < 31 ; i++)
