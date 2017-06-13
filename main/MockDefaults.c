@@ -37,13 +37,6 @@ int    (*hook_printf)(const char* pFormat, ...) = printf;
 static HANDLE     g_stdIn = INVALID_HANDLE_VALUE;
 static HANDLE     g_stdOut = INVALID_HANDLE_VALUE;
 
-static void initStdIo(void);
-
-int Console_HasStdInDataToRead()
-{
-    return _kbhit();
-}
-
 static void initStdIo(void)
 {
     if (g_stdIn != INVALID_HANDLE_VALUE  && g_stdOut != INVALID_HANDLE_VALUE)
@@ -52,17 +45,27 @@ static void initStdIo(void)
     g_stdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 }
 
+int Console_HasStdInDataToRead()
+{
+    DWORD bytesAvailable = 0;
+
+    initStdIo();
+    PeekNamedPipe(g_stdIn,NULL,0,NULL,&bytesAvailable,NULL);
+    return bytesAvailable > 0;
+}
 
 int Console_ReadStdIn()
 {
     char   c = 0;
     DWORD  bytesRead = 0;
     BOOL   result = FALSE;
-    
+
     initStdIo();
+
     result = ReadFile(g_stdIn, &c, sizeof(c), &bytesRead, NULL);
     if (!result || bytesRead != sizeof(c))
         __throw(fileException);
+
     return c;
 }
 
