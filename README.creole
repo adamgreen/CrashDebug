@@ -50,12 +50,12 @@ git submodule update
 
 
 == How to Build
-If you don't want to build the CrashDebug utility yourself, you can use the pre-built binaries (OS X, Windows, and
+If you don't want to build the CrashDebug utility yourself, you can use the pre-built binaries (macOS, Windows, and
 Ubuntu) for CrashDebug that can be found at [[https://github.com/adamgreen/CrashDebug/tree/master/bins]].
 
 === Toolchain
 You will need a **gcc** or **clang** toolchain appropriate for your platform:
-* **OS X**: [[https://developer.apple.com/xcode/downloads/ | Xcode]] and
+* **macOS**: [[https://developer.apple.com/xcode/downloads/ | Xcode]] and
    [[https://developer.apple.com/library/ios/technotes/tn2339/_index.html | it's command line tools]].
 * **Windows**: [[http://www.mingw.org/wiki/Getting_Started | MinGW]]
 * **Linux**: You will need gcc and g++.
@@ -89,9 +89,9 @@ tests.\\
 the unit tests.  **Windows** users would run {{{make CrashDebug.exe}}} instead.\\
 
 The build has been tested on the following operating systems:
-* OS X Mavericks
+* macOS Sierra
 * Windows 7
-* Ubuntu 12.04
+* Ubuntu 16.04
 
 === GCOV Code Coverage Notes
 All intermediate binaries (*.o and *.a) for code coverage runs are found in the gcov/obj and gcov/lib directories.  If
