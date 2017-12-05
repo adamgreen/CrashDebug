@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -57,6 +57,7 @@ typedef struct ParseResults
 
 
 static FILE* openFileAndThrowOnError(const char* pLogFilename);
+static void initPSPandMSP(RegisterContext* pContext);
 static void firstPassHandler(ParseObject* pObject, const ParseResults* pParseResults);
 static void firstPassMemoryHandler(ParseObject* pObject, const ParseResults* pParseResults);
 static void firstPassRegisterHandler(ParseObject* pObject, const ParseResults* pParseResults);
@@ -93,6 +94,7 @@ __throws void GdbLogParse(IMemory* pMem, RegisterContext* pContext, const char* 
     __try
     {
         pLogFile = openFileAndThrowOnError(pLogFilename);
+        initPSPandMSP(pContext);
         parseLines(pMem, pContext, pLogFile, firstPassHandler);
         rewindLogFileAndThrowOnError(pLogFile);
         parseLines(pMem, pContext, pLogFile, secondPassHandler);
@@ -112,6 +114,12 @@ static FILE* openFileAndThrowOnError(const char* pLogFilename)
     if (!pLogFile)
         __throw(fileException);
     return pLogFile;
+}
+
+static void initPSPandMSP(RegisterContext* pContext)
+{
+    pContext->R[MSP] = DEFAULT_SP_VALUE;
+    pContext->R[PSP] = DEFAULT_SP_VALUE;
 }
 
 static void firstPassHandler(ParseObject* pObject, const ParseResults* pParseResults)
@@ -322,6 +330,8 @@ static int isRegisterLine(const char* pLine, size_t* pRegisterOffset)
         { "lr             ", offsetof(RegisterContext, R[LR]) },
         { "pc             ", offsetof(RegisterContext, R[PC]) },
         { "xpsr           ", offsetof(RegisterContext, R[XPSR]) },
+        { "msp            ", offsetof(RegisterContext, R[MSP]) },
+        { "psp            ", offsetof(RegisterContext, R[PSP]) },
         { "s0             ", offsetof(RegisterContext, FPR[S0]) },
         { "s1             ", offsetof(RegisterContext, FPR[S1]) },
         { "s2             ", offsetof(RegisterContext, FPR[S2]) },

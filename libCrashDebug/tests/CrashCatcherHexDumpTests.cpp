@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -54,13 +54,13 @@ TEST_GROUP_BASE(CrashCatcherHexDump, DumpBaseTest)
 // Tests that are specific to HexDump logs.
 TEST(CrashCatcherHexDump, DumpContainingNewlinesBetweenHexDigits_VerifyRegistersReadAndEmptyMemoryRegions)
 {
-    static const char testHexDump[] = "63430200\r\n"
+    static const char testHexDump[] = "63430300\r\n"
                                       "00000000\r\n"
                                       "00000000111111112222222233333333\n"
                                       "44444444555555556666666677777777\r"
                                       "8888888899999999AAAAAAAABBBBBBBB\n\r"
                                       "CCCCCCCCDDDDDDDDEEEEEEEEFFFFFFFF\r\n"
-                                      "0DF00DF0EDFEADBA";
+                                      "0DF00DF04545454554545454EDFEADBA";
     FILE* pFile = fopen(m_pTestFilename, "w");
     fwrite(testHexDump, 1, sizeof(testHexDump) - 1, pFile);
     fclose(pFile);
@@ -83,18 +83,20 @@ TEST(CrashCatcherHexDump, DumpContainingNewlinesBetweenHexDigits_VerifyRegisters
     m_expectedRegisters.R[LR]            = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]            = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR]          = 0xF00DF00D;
+    m_expectedRegisters.R[MSP]           = 0x45454545;
+    m_expectedRegisters.R[PSP]           = 0x54545454;
     m_expectedRegisters.exceptionPSR     = 0xBAADFEED;
 }
 
 TEST(CrashCatcherHexDump, SameTestAsPreviousButWithLowercaseHexDigits)
 {
-    static const char testHexDump[] = "63430200\r\n"
+    static const char testHexDump[] = "63430300\r\n"
                                       "00000000\r\n"
                                       "00000000111111112222222233333333\n"
                                       "44444444555555556666666677777777\r"
                                       "8888888899999999aaaaaaaabbbbbbbb\n\r"
                                       "ccccccccddddddddeeeeeeeeffffffff\r\n"
-                                      "0df00df0edfeadba";
+                                      "0df00df04545454554545454edfeadba";
     FILE* pFile = fopen(m_pTestFilename, "w");
     fwrite(testHexDump, 1, sizeof(testHexDump) - 1, pFile);
     fclose(pFile);
@@ -117,18 +119,20 @@ TEST(CrashCatcherHexDump, SameTestAsPreviousButWithLowercaseHexDigits)
     m_expectedRegisters.R[LR]            = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]            = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR]          = 0xF00DF00D;
+    m_expectedRegisters.R[MSP]           = 0x45454545;
+    m_expectedRegisters.R[PSP]           = 0x54545454;
     m_expectedRegisters.exceptionPSR     = 0xBAADFEED;
 }
 
 TEST(CrashCatcherHexDump, DumpContainingOneTooFewHexDigits_VerifyExceptionThrown)
 {
-    static const char testHexDump[] = "63430200\r\n"
+    static const char testHexDump[] = "63430300\r\n"
                                       "00000000\r\n"
                                       "00000000111111112222222233333333\n"
                                       "44444444555555556666666677777777\r"
                                       "8888888899999999AAAAAAAABBBBBBBB\n\r"
                                       "CCCCCCCCDDDDDDDDEEEEEEEEFFFFFFFF\r\n"
-                                      "0DF00DF0EDFEADBA";
+                                      "0DF00DF04545454554545454EDFEADBA";
     FILE* pFile = fopen(m_pTestFilename, "w");
     fwrite(testHexDump, 1, sizeof(testHexDump) - 2, pFile);
     fclose(pFile);
@@ -153,18 +157,20 @@ TEST(CrashCatcherHexDump, DumpContainingOneTooFewHexDigits_VerifyExceptionThrown
     m_expectedRegisters.R[LR]            = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]            = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR]          = 0xF00DF00D;
+    m_expectedRegisters.R[MSP]           = 0x45454545;
+    m_expectedRegisters.R[PSP]           = 0x54545454;
     m_expectedRegisters.exceptionPSR     = 0x00ADFEED;
 }
 
 TEST(CrashCatcherHexDump, DumpContainingNonHexDigitInLastByte_VerifyExceptionThrown)
 {
-    static const char testHexDump[] = "63430200\r\n"
+    static const char testHexDump[] = "63430300\r\n"
                                       "00000000\r\n"
                                       "00000000111111112222222233333333\n"
                                       "44444444555555556666666677777777\r"
                                       "8888888899999999AAAAAAAABBBBBBBB\n\r"
                                       "CCCCCCCCDDDDDDDDEEEEEEEEFFFFFFFF\r\n"
-                                      "0DF00DF0EDFEADBG";
+                                      "0DF00DF04545454554545454EDFEADBG";
     FILE* pFile = fopen(m_pTestFilename, "w");
     fwrite(testHexDump, 1, sizeof(testHexDump) - 1, pFile);
     fclose(pFile);
@@ -189,5 +195,7 @@ TEST(CrashCatcherHexDump, DumpContainingNonHexDigitInLastByte_VerifyExceptionThr
     m_expectedRegisters.R[LR]            = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]            = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR]          = 0xF00DF00D;
+    m_expectedRegisters.R[MSP]           = 0x45454545;
+    m_expectedRegisters.R[PSP]           = 0x54545454;
     m_expectedRegisters.exceptionPSR     = 0x00ADFEED;
 }

@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -67,6 +67,10 @@ TEST(queryTests, qXfer_TargetXML_ReturnsExpectedOutputForCortexM0)
                          "<reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
                          "<reg name=\"xpsr\" bitsize=\"32\" regnum=\"25\"/>\n"
                          "</feature>\n"
+                         "<feature name=\"org.gnu.gdb.arm.m-system\">\n"
+                         "<reg name=\"msp\" bitsize=\"32\" regnum=\"26\"/>\n"
+                         "<reg name=\"psp\" bitsize=\"32\" regnum=\"27\"/>\n"
+                         "</feature>\n"
                          "</target>\n#+");
     STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
 }
@@ -98,6 +102,10 @@ TEST(queryTests, qXfer_TargetXML_FPUFlagSet_ReturnsExpectedOutputForCortexM4F)
                          "<reg name=\"lr\" bitsize=\"32\"/>\n"
                          "<reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>\n"
                          "<reg name=\"xpsr\" bitsize=\"32\" regnum=\"25\"/>\n"
+                         "</feature>\n"
+                         "<feature name=\"org.gnu.gdb.arm.m-system\">\n"
+                         "<reg name=\"msp\" bitsize=\"32\" regnum=\"26\"/>\n"
+                         "<reg name=\"psp\" bitsize=\"32\" regnum=\"27\"/>\n"
                          "</feature>\n"
                          "<feature name=\"org.gnu.gdb.arm.vfp\">\n"
                          "<reg name=\"d0\" bitsize=\"64\" type=\"ieee_double\"/>\n"

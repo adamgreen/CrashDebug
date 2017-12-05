@@ -27,6 +27,8 @@ TEST_GROUP_BASE(GdbLogParser, DumpBaseTest)
     void setup()
     {
         DumpBaseTest::setup();
+        m_expectedRegisters.R[MSP] = DEFAULT_SP_VALUE;
+        m_expectedRegisters.R[PSP] = DEFAULT_SP_VALUE;
         fakeLogFileAccess();
     }
 
@@ -48,12 +50,14 @@ TEST_GROUP_BASE(GdbLogParser, DumpBaseTest)
 };
 
 
-TEST(GdbLogParser, InvalidLogFilename_ShouldThrow)
+TEST(GdbLogParser, InvalidLogFilename_ShouldThrowMSPandPSPnotInit)
 {
     fopenSetReturn(NULL);
         __try_and_catch( GdbLogParse(m_pMem, &m_actualRegisters, "invalid_file.log") );
     CHECK_EQUAL(fileException, getExceptionCode());
     clearExceptionCode();
+    m_expectedRegisters.R[MSP] = 0xDEADBEEF;
+    m_expectedRegisters.R[PSP] = 0xDEADBEEF;
 }
 
 TEST(GdbLogParser, OneLineLogFile_1RamValue_FailFSeekCall_ShouldThrow)
@@ -304,7 +308,9 @@ TEST(GdbLogParser, HaveAllRegisters_ShouldReturnNoRegionsAndSetAllRegisters)
                                        "sp             0xdddddddd",
                                        "lr             0xeeeeeeee",
                                        "pc             0xffffffff",
-                                       "xpsr           0xf00df00d" };
+                                       "xpsr           0xf00df00d",
+                                       "msp            0x45454545",
+                                       "psp            0x54545454"};
 
     fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
@@ -327,6 +333,8 @@ TEST(GdbLogParser, HaveAllRegisters_ShouldReturnNoRegionsAndSetAllRegisters)
     m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0x45454545;
+    m_expectedRegisters.R[PSP] = 0x54545454;
 }
 
 TEST(GdbLogParser, HaveAllRegistersAndTwoMemoryBanks_ShouldReturnTwoRegionsAndSetAllRegisters)
@@ -355,7 +363,10 @@ TEST(GdbLogParser, HaveAllRegistersAndTwoMemoryBanks_ShouldReturnTwoRegionsAndSe
                                        "sp             0xdddddddd",
                                        "lr             0xeeeeeeee",
                                        "pc             0xffffffff",
-                                       "xpsr           0xf00df00d" };
+                                       "xpsr           0xf00df00d",
+                                       "msp            0x45454545",
+                                       "psp            0x54545454"};
+                                       
 
     fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");
@@ -386,6 +397,8 @@ TEST(GdbLogParser, HaveAllRegistersAndTwoMemoryBanks_ShouldReturnTwoRegionsAndSe
     m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0x45454545;
+    m_expectedRegisters.R[PSP] = 0x54545454;
 }
 
 TEST(GdbLogParser, HaveAllIntegerAndFloatingPointRegisters_ShouldReturnNoRegionsAndSetAllRegisters)
@@ -411,6 +424,8 @@ TEST(GdbLogParser, HaveAllIntegerAndFloatingPointRegisters_ShouldReturnNoRegions
                                        "lr             0xeeeeeeee",
                                        "pc             0xffffffff",
                                        "xpsr           0xf00df00d",
+                                       "msp            0x45454545",
+                                       "psp            0x54545454",
                                        "fpscr          0x1	1",
                                        "s0             0	(raw 0x00000000)",
                                        "s1             1	(raw 0x3f800000)",
@@ -454,6 +469,8 @@ TEST(GdbLogParser, HaveAllIntegerAndFloatingPointRegisters_ShouldReturnNoRegions
     for (uint32_t i = 0 ; i < 16 ; i++)
         m_expectedRegisters.R[i] = 0x11111111 * i;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0x45454545;
+    m_expectedRegisters.R[PSP] = 0x54545454;
     for (int i = 0 ; i < 32 ; i++)
     {
         float    floatVal = (float)i;

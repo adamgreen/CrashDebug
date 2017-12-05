@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -43,7 +43,7 @@ TEST(registerTests, ReadRegisters)
                            "44444444555555556666666677777777"
                            "8888888899999999aaaaaaaabbbbbbbb"
                            "ccccccccddddddddeeeeeeeefeffffff"
-                           "00000001#+");
+                           "00000001a5a5a5a55a5a5a5a#+");
     STRCMP_EQUAL(checksumExpected(), mockIComm_GetTransmittedData());
 }
 
@@ -64,7 +64,7 @@ TEST(registerTests, ReadIntegerAndFloatRegisters)
                            "44444444555555556666666677777777"
                            "8888888899999999aaaaaaaabbbbbbbb"
                            "ccccccccddddddddeeeeeeeefeffffff"
-                           "00000001"
+                           "00000001a5a5a5a55a5a5a5a"
                            "0000000001000000020000000300000004000000050000000600000007000000"
                            "08000000090000000a0000000b0000000c0000000d0000000e0000000f000000"
                            "1000000011000000120000001300000014000000150000001600000017000000"
@@ -80,7 +80,7 @@ TEST(registerTests, WriteRegisters)
                                             "44444444555555556666666677777777"
                                             "8888888899999999aaaaaaaabbbbbbbb"
                                             "ccccccccddddddddeeeeeeeefeffffff"
-                                            "ffffffff#", "+$c#");
+                                            "ffffffff4545454554545454#", "+$c#");
         mriPlatform_Run(mockIComm_Get());
     appendExpectedTPacket(SIGTRAP, 0xA5A5A5A5, 0xA5A5A5A5, 0xA5A5A5A5, 0xA5A5A5A5);
     appendExpectedString("+$OK#+");
@@ -90,6 +90,8 @@ TEST(registerTests, WriteRegisters)
         CHECK_EQUAL(0x11111111U * i, m_context.R[i]);
     CHECK_EQUAL(0xFFFFFFFEU, m_context.R[PC]);
     CHECK_EQUAL(0xFFFFFFFFU, m_context.R[XPSR]);
+    CHECK_EQUAL(0x45454545U, m_context.R[MSP]);
+    CHECK_EQUAL(0x54545454U, m_context.R[PSP]);
 }
 
 TEST(registerTests, WriteIntegerAndFloatRegisters)
@@ -100,7 +102,7 @@ TEST(registerTests, WriteIntegerAndFloatRegisters)
                                             "44444444555555556666666677777777"
                                             "8888888899999999aaaaaaaabbbbbbbb"
                                             "ccccccccddddddddeeeeeeeefeffffff"
-                                            "ffffffff"
+                                            "ffffffff4545454554545454"
                                             "0000000001000000020000000300000004000000050000000600000007000000"
                                             "08000000090000000a0000000b0000000c0000000d0000000e0000000f000000"
                                             "1000000011000000120000001300000014000000150000001600000017000000"
@@ -115,6 +117,8 @@ TEST(registerTests, WriteIntegerAndFloatRegisters)
         CHECK_EQUAL(0x11111111U * i, m_context.R[i]);
     CHECK_EQUAL(0xFFFFFFFEU, m_context.R[PC]);
     CHECK_EQUAL(0xFFFFFFFFU, m_context.R[XPSR]);
+    CHECK_EQUAL(0x45454545U, m_context.R[MSP]);
+    CHECK_EQUAL(0x54545454U, m_context.R[PSP]);
     for (uint32_t i = 0 ; i < 15 ; i++)
         CHECK_EQUAL(i, m_context.FPR[i]);
     CHECK_EQUAL(0xBAADF00D, m_context.FPR[FPSCR]);

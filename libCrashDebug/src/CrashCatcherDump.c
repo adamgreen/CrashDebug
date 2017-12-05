@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -31,6 +31,7 @@ typedef struct Object
     IMemory*         pMem;
     RegisterContext* pContext;
     FILE*            pFile;
+    int              isVersion2Dump;
 } Object;
 
 
@@ -114,14 +115,24 @@ static void validateDumpSignature(Object* pObject)
                                                  CRASH_CATCHER_SIGNATURE_BYTE1,
                                                  CRASH_CATCHER_VERSION_MAJOR,
                                                  CRASH_CATCHER_VERSION_MINOR};
+    static const uint8_t expectedVersion2Signature[4] = {CRASH_CATCHER_SIGNATURE_BYTE0,
+                                                         CRASH_CATCHER_SIGNATURE_BYTE1,
+                                                         2,
+                                                         0};
     uint8_t              actualSignature[4];
     int                  result = -1;
 
     result = pObject->read(pObject, actualSignature, sizeof(actualSignature));
     if (result == -1)
         __throw(fileFormatException);
-    if (0 != memcmp(actualSignature, expectedSignature, sizeof(actualSignature)))
-        __throw(fileFormatException);
+    if (0 == memcmp(actualSignature, expectedSignature, sizeof(actualSignature)))
+        return;
+    if (0 == memcmp(actualSignature, expectedVersion2Signature, sizeof(actualSignature)))
+    {
+        pObject->isVersion2Dump = 1;
+        return;
+    }
+    __throw(fileFormatException);
 }
 
 static void readFlags(Object* pObject)
@@ -133,9 +144,21 @@ static void readFlags(Object* pObject)
 
 static void readIntegerRegisters(Object* pObject)
 {
-    static const int integerContextSize = offsetof(RegisterContext, FPR) - offsetof(RegisterContext, R);
+    int integerContextSize = offsetof(RegisterContext, exceptionPSR) - offsetof(RegisterContext, R);
+    if (pObject->isVersion2Dump)
+    {
+        /* Version 2 crash dumps don't have MSP and PSP register contents. */
+        integerContextSize -= 2 * sizeof(uint32_t);
+        pObject->pContext->R[MSP] = DEFAULT_SP_VALUE;
+        pObject->pContext->R[PSP] = DEFAULT_SP_VALUE;
+    }
+    
     int result = pObject->read(pObject, pObject->pContext->R, integerContextSize);
     if (result != integerContextSize)
+        __throw(fileFormatException);
+
+    result = pObject->read(pObject, &pObject->pContext->exceptionPSR, sizeof(uint32_t));
+    if (result != sizeof(uint32_t))
         __throw(fileFormatException);
 }
 

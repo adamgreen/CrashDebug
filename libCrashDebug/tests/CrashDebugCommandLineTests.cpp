@@ -42,11 +42,14 @@ struct ElfFile
 static const char     g_usageString[] = "Usage:";
 static const char*    g_imageFilename = "image.bin";
 static const char*    g_elfFilename = "image.elf";
-static const char*    g_dumpFilename = "gdb.txt";
-static const char*    g_hexDumpFilename = "crash.txt";
-static const char*    g_binDumpFilename = "crash.dmp";
+static const char*    g_dumpFilenameV2 = "gdb_v2.txt";
+static const char*    g_dumpFilenameV3 = "gdb_v3.txt";
+static const char*    g_hexDumpFilenameV2 = "crash_v2.txt";
+static const char*    g_hexDumpFilenameV3 = "crash_v3.txt";
+static const char*    g_binDumpFilenameV2 = "crash_v2.dmp";
+static const char*    g_binDumpFilenameV3 = "crash_v3.dmp";
 static const uint32_t g_imageData[2] = { 0x10000004, 0x00000100 };
-static const char     g_dumpData[] =  "0x10000000:\t0x11111111\t0x22222222\t0x33333333\t0x44444444\n"
+static const char     g_dumpDataV2[] =  "0x10000000:\t0x11111111\t0x22222222\t0x33333333\t0x44444444\n"
                                       "r0             0x5a5a5a5a\t0\n"
                                       "r1             0x11111111\n"
                                       "r2             0x22222222\n"
@@ -64,7 +67,27 @@ static const char     g_dumpData[] =  "0x10000000:\t0x11111111\t0x22222222\t0x33
                                       "lr             0xeeeeeeee\n"
                                       "pc             0xffffffff\n"
                                       "xpsr           0xf00df00d\n";
-static const char     g_hexCrashDump[] = "63430200\r\n"
+static const char     g_dumpDataV3[] =  "0x10000000:\t0x11111111\t0x22222222\t0x33333333\t0x44444444\n"
+                                      "r0             0x5a5a5a5a\t0\n"
+                                      "r1             0x11111111\n"
+                                      "r2             0x22222222\n"
+                                      "r3             0x33333333\n"
+                                      "r4             0x44444444\n"
+                                      "r5             0x55555555\n"
+                                      "r6             0x66666666\n"
+                                      "r7             0x77777777\n"
+                                      "r8             0x88888888\n"
+                                      "r9             0x99999999\n"
+                                      "r10            0xAAAAAAAA\n"
+                                      "r11            0xbbbbbbbb\n"
+                                      "r12            0xcccccccc\n"
+                                      "sp             0xdddddddd\n"
+                                      "lr             0xeeeeeeee\n"
+                                      "pc             0xffffffff\n"
+                                      "xpsr           0xf00df00d\n"
+                                      "msp            0xa5a5a5a5\n"
+                                      "psp            0xbcbcbcbc\n";
+static const char     g_hexCrashDumpV2[] = "63430200\r\n"
                                          "00000000\r\n"
                                          "5a5a5a5a111111112222222233333333\r\n"
                                          "44444444555555556666666677777777\r\n"
@@ -75,7 +98,18 @@ static const char     g_hexCrashDump[] = "63430200\r\n"
                                          "03000000\r\n"
                                          "0000001010000010\r\n"
                                          "11111111222222223333333344444444\r\n";
-static const char     g_binCrashDump[] = "\x63\x43\x02\x00"
+static const char     g_hexCrashDumpV3[] = "63430300\r\n"
+                                         "00000000\r\n"
+                                         "5a5a5a5a111111112222222233333333\r\n"
+                                         "44444444555555556666666677777777\r\n"
+                                         "8888888899999999AAAAAAAABBBBBBBB\r\n"
+                                         "CCCCCCCC\r\n"
+                                         "DDDDDDDD\r\n"
+                                         "EEEEEEEEFFFFFFFF0DF00DF0\r\n"
+                                         "A5A5A5A5BCBCBCBC03000000\r\n"
+                                         "0000001010000010\r\n"
+                                         "11111111222222223333333344444444\r\n";
+static const char     g_binCrashDumpV2[] = "\x63\x43\x02\x00"
                                          "\x00\x00\x00\x00"
                                          "\x5a\x5a\x5a\x5a\x11\x11\x11\x11\x22\x22\x22\x22\x33\x33\x33\x33"
                                          "\x44\x44\x44\x44\x55\x55\x55\x55\x66\x66\x66\x66\x77\x77\x77\x77"
@@ -84,6 +118,17 @@ static const char     g_binCrashDump[] = "\x63\x43\x02\x00"
                                          "\xDD\xDD\xDD\xDD"
                                          "\xEE\xEE\xEE\xEE\xFF\xFF\xFF\xFF\x0D\xF0\x0D\xF0"
                                          "\x03\x00\x00\x00"
+                                         "\x00\x00\x00\x10\x10\x00\x00\x10"
+                                         "\x11\x11\x11\x11\x22\x22\x22\x22\x33\x33\x33\x33\x44\x44\x44\x44";
+static const char     g_binCrashDumpV3[] = "\x63\x43\x03\x00"
+                                         "\x00\x00\x00\x00"
+                                         "\x5a\x5a\x5a\x5a\x11\x11\x11\x11\x22\x22\x22\x22\x33\x33\x33\x33"
+                                         "\x44\x44\x44\x44\x55\x55\x55\x55\x66\x66\x66\x66\x77\x77\x77\x77"
+                                         "\x88\x88\x88\x88\x99\x99\x99\x99\xAA\xAA\xAA\xAA\xBB\xBB\xBB\xBB"
+                                         "\xCC\xCC\xCC\xCC"
+                                         "\xDD\xDD\xDD\xDD"
+                                         "\xEE\xEE\xEE\xEE\xFF\xFF\xFF\xFF\x0D\xF0\x0D\xF0"
+                                         "\xA5\xA5\xA5\xA5\xBC\xBC\xBC\xBC\x03\x00\x00\x00"
                                          "\x00\x00\x00\x10\x10\x00\x00\x10"
                                          "\x11\x11\x11\x11\x22\x22\x22\x22\x33\x33\x33\x33\x44\x44\x44\x44";
 
@@ -130,9 +175,12 @@ TEST_GROUP(CrashDebugCommandLine)
         MallocFailureInject_Restore();
         CrashDebugCommandLine_Uninit(&m_commandLine);
         remove(g_imageFilename);
-        remove(g_dumpFilename);
-        remove(g_hexDumpFilename);
-        remove(g_binDumpFilename);
+        remove(g_dumpFilenameV2);
+        remove(g_hexDumpFilenameV2);
+        remove(g_binDumpFilenameV2);
+        remove(g_dumpFilenameV3);
+        remove(g_hexDumpFilenameV3);
+        remove(g_binDumpFilenameV3);
         remove(g_elfFilename);
     }
 
@@ -172,16 +220,28 @@ TEST_GROUP(CrashDebugCommandLine)
         fwrite(&m_elfFile, 1, sizeof(m_elfFile), pFile);
         fclose(pFile);
 
-        pFile = fopen(g_dumpFilename, "w");
-        fwrite(g_dumpData, 1, sizeof(g_dumpData), pFile);
+        pFile = fopen(g_dumpFilenameV2, "w");
+        fwrite(g_dumpDataV2, 1, sizeof(g_dumpDataV2), pFile);
         fclose(pFile);
 
-        pFile = fopen(g_hexDumpFilename, "w");
-        fwrite(g_hexCrashDump, 1, sizeof(g_hexCrashDump) - 1, pFile);
+        pFile = fopen(g_hexDumpFilenameV2, "w");
+        fwrite(g_hexCrashDumpV2, 1, sizeof(g_hexCrashDumpV2) - 1, pFile);
         fclose(pFile);
 
-        pFile = fopen(g_binDumpFilename, "w");
-        fwrite(g_binCrashDump, 1, sizeof(g_binCrashDump) - 1, pFile);
+        pFile = fopen(g_binDumpFilenameV2, "w");
+        fwrite(g_binCrashDumpV2, 1, sizeof(g_binCrashDumpV2) - 1, pFile);
+        fclose(pFile);
+
+        pFile = fopen(g_dumpFilenameV3, "w");
+        fwrite(g_dumpDataV3, 1, sizeof(g_dumpDataV3), pFile);
+        fclose(pFile);
+
+        pFile = fopen(g_hexDumpFilenameV3, "w");
+        fwrite(g_hexCrashDumpV3, 1, sizeof(g_hexCrashDumpV3) - 1, pFile);
+        fclose(pFile);
+
+        pFile = fopen(g_binDumpFilenameV3, "w");
+        fwrite(g_binCrashDumpV3, 1, sizeof(g_binCrashDumpV3) - 1, pFile);
         fclose(pFile);
     }
 
@@ -260,7 +320,7 @@ TEST(CrashDebugCommandLine, JustImageFilename_ShouldThrowAsDumpFilenameIsRequire
 TEST(CrashDebugCommandLine, LeaveOffImageFilenameAndBaseAddress_ShouldThrow)
 {
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV2);
     addArg("--bin");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
@@ -271,7 +331,7 @@ TEST(CrashDebugCommandLine, LeaveOffImageFilenameAndBaseAddress_ShouldThrow)
 TEST(CrashDebugCommandLine, LeaveOffBaseAddress_ShouldThrow)
 {
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV2);
     addArg("--bin");
     addArg(g_imageFilename);
     createTestFiles();
@@ -292,13 +352,13 @@ TEST(CrashDebugCommandLine, LeaveOffDumpFilename_ShouldThrow)
     CHECK(m_commandLine.pMemory == NULL);
 }
 
-TEST(CrashDebugCommandLine, ValidImageAndDumpFilenames_ValidateMemoryAndRegisters)
+TEST(CrashDebugCommandLine, ValidImageAndVersion2DumpFilenames_ValidateMemoryAndRegisters)
 {
     addArg("--bin");
     addArg(g_imageFilename);
     addArg("0x0");
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV2);
     createTestFiles();
         CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
     CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00000000));
@@ -324,15 +384,53 @@ TEST(CrashDebugCommandLine, ValidImageAndDumpFilenames_ValidateMemoryAndRegister
     m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = DEFAULT_SP_VALUE;
+    m_expectedRegisters.R[PSP] = DEFAULT_SP_VALUE;
 }
 
-TEST(CrashDebugCommandLine, ValidImageAndDumpFilenames_DifferentBaseAddress_ValidateMemoryAndRegisters)
+TEST(CrashDebugCommandLine, ValidImageAndVersion3DumpFilenames_ValidateMemoryAndRegisters)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x0");
+    addArg("--dump");
+    addArg(g_dumpFilenameV3);
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00000000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00000004));
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0xa5a5a5a5;
+    m_expectedRegisters.R[PSP] = 0xbcbcbcbc;
+}
+
+TEST(CrashDebugCommandLine, ValidImageAndVersion2DumpFilenames_DifferentBaseAddress_ValidateMemoryAndRegisters)
 {
     addArg("--bin");
     addArg(g_imageFilename);
     addArg("0x4000");
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV2);
     createTestFiles();
         CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
     CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00004000));
@@ -358,15 +456,53 @@ TEST(CrashDebugCommandLine, ValidImageAndDumpFilenames_DifferentBaseAddress_Vali
     m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = DEFAULT_SP_VALUE;
+    m_expectedRegisters.R[PSP] = DEFAULT_SP_VALUE;
 }
 
-TEST(CrashDebugCommandLine, ValidImageAndCrashCatcherHexDumpFilenames_ValidateMemoryAndRegisters)
+TEST(CrashDebugCommandLine, ValidImageAndVersion3DumpFilenames_DifferentBaseAddress_ValidateMemoryAndRegisters)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x4000");
+    addArg("--dump");
+    addArg(g_dumpFilenameV3);
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00004000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00004004));
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0xa5a5a5a5;
+    m_expectedRegisters.R[PSP] = 0xbcbcbcbc;
+}
+
+TEST(CrashDebugCommandLine, ValidImageAndCrashCatcherVersion2HexDumpFilenames_ValidateMemoryAndRegisters)
 {
     addArg("--bin");
     addArg(g_imageFilename);
     addArg("0x0");
     addArg("--dump");
-    addArg(g_hexDumpFilename);
+    addArg(g_hexDumpFilenameV2);
     createTestFiles();
         CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
     CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00000000));
@@ -392,15 +528,17 @@ TEST(CrashDebugCommandLine, ValidImageAndCrashCatcherHexDumpFilenames_ValidateMe
     m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = DEFAULT_SP_VALUE;
+    m_expectedRegisters.R[PSP] = DEFAULT_SP_VALUE;
 }
 
-TEST(CrashDebugCommandLine, ValidImageAndCrashCatcherBinaryDumpFilenames_ValidateMemoryAndRegisters)
+TEST(CrashDebugCommandLine, ValidImageAndCrashCatcherVersion3HexDumpFilenames_ValidateMemoryAndRegisters)
 {
     addArg("--bin");
     addArg(g_imageFilename);
     addArg("0x0");
     addArg("--dump");
-    addArg(g_binDumpFilename);
+    addArg(g_hexDumpFilenameV3);
     createTestFiles();
         CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
     CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00000000));
@@ -426,6 +564,80 @@ TEST(CrashDebugCommandLine, ValidImageAndCrashCatcherBinaryDumpFilenames_Validat
     m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0xa5a5a5a5;
+    m_expectedRegisters.R[PSP] = 0xbcbcbcbc;
+}
+
+TEST(CrashDebugCommandLine, ValidImageAndVersion2CrashCatcherBinaryDumpFilenames_ValidateMemoryAndRegisters)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x0");
+    addArg("--dump");
+    addArg(g_binDumpFilenameV2);
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00000000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00000004));
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = DEFAULT_SP_VALUE;
+    m_expectedRegisters.R[PSP] = DEFAULT_SP_VALUE;
+}
+
+TEST(CrashDebugCommandLine, ValidImageAndVersion3CrashCatcherBinaryDumpFilenames_ValidateMemoryAndRegisters)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x0");
+    addArg("--dump");
+    addArg(g_binDumpFilenameV3);
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00000000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00000004));
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0xa5a5a5a5;
+    m_expectedRegisters.R[PSP] = 0xbcbcbcbc;
 }
 
 TEST(CrashDebugCommandLine, FailImageFileOpen_ShouldThrow)
@@ -434,7 +646,7 @@ TEST(CrashDebugCommandLine, FailImageFileOpen_ShouldThrow)
     addArg(g_imageFilename);
     addArg("0x0");
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV3);
     createTestFiles();
     fopenSetReturn(NULL);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
@@ -447,7 +659,7 @@ TEST(CrashDebugCommandLine, FailImageFileSeekInGetFileSize_ShouldThrow)
     addArg(g_imageFilename);
     addArg("0x0");
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV3);
     createTestFiles();
     fseekSetReturn(-1);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
@@ -460,7 +672,7 @@ TEST(CrashDebugCommandLine, FailImageFileBufferAllocation_ShouldThrow)
     addArg(g_imageFilename);
     addArg("0x0");
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV3);
     createTestFiles();
     MallocFailureInject_FailAllocation(1);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
@@ -473,7 +685,7 @@ TEST(CrashDebugCommandLine, FailImageFileRead_ShouldThrow)
     addArg(g_imageFilename);
     addArg("0x0");
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV3);
     createTestFiles();
     freadFail(-1);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
@@ -486,7 +698,7 @@ TEST(CrashDebugCommandLine, FailMemoryRegionAllocation_ShouldThrow)
     addArg(g_imageFilename);
     addArg("0");
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV3);
     createTestFiles();
     MallocFailureInject_FailAllocation(2);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
@@ -505,12 +717,12 @@ TEST(CrashDebugCommandLine, InvalidDumpFilename_ShouldThrow)
     validateExceptionThrownAndUsageStringDisplayed(fileException);
 }
 
-TEST(CrashDebugCommandLine, ValidElfAndDumpFilenames_ValidateMemoryAndRegisters)
+TEST(CrashDebugCommandLine, ValidElfAndVersion2DumpFilenames_ValidateMemoryAndRegisters)
 {
     addArg("--elf");
     addArg(g_elfFilename);
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV2);
     initElfFile();
     createTestFiles();
         CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
@@ -537,12 +749,50 @@ TEST(CrashDebugCommandLine, ValidElfAndDumpFilenames_ValidateMemoryAndRegisters)
     m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = DEFAULT_SP_VALUE;
+    m_expectedRegisters.R[PSP] = DEFAULT_SP_VALUE;
+}
+
+TEST(CrashDebugCommandLine, ValidElfAndVersion3DumpFilenames_ValidateMemoryAndRegisters)
+{
+    addArg("--elf");
+    addArg(g_elfFilename);
+    addArg("--dump");
+    addArg(g_dumpFilenameV3);
+    initElfFile();
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00000000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00000004));
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0xa5a5a5a5;
+    m_expectedRegisters.R[PSP] = 0xbcbcbcbc;
 }
 
 TEST(CrashDebugCommandLine, LeaveOffElfFilename_ShouldThrow)
 {
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV2);
     addArg("--elf");
     initElfFile();
     createTestFiles();
@@ -556,7 +806,7 @@ TEST(CrashDebugCommandLine, InvalidElfSignature_ShouldThrow)
     addArg("--elf");
     addArg(g_elfFilename);
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV2);
     initElfFile();
     m_elfFile.elfHeader.e_ident[EI_MAG0] += 1;
     createTestFiles();
@@ -565,12 +815,12 @@ TEST(CrashDebugCommandLine, InvalidElfSignature_ShouldThrow)
     CHECK(m_commandLine.pMemory == NULL);
 }
 
-TEST(CrashDebugCommandLine, ValidElfAndDumpFilenames_DifferentBaseAddress_ValidateMemoryAndRegisters)
+TEST(CrashDebugCommandLine, ValidElfAndVersion2DumpFilenames_DifferentBaseAddress_ValidateMemoryAndRegisters)
 {
     addArg("--elf");
     addArg(g_elfFilename);
     addArg("--dump");
-    addArg(g_dumpFilename);
+    addArg(g_dumpFilenameV2);
     initElfFile();
     m_elfFile.pgmHeader.p_paddr = 0x4000;
     createTestFiles();
@@ -598,4 +848,43 @@ TEST(CrashDebugCommandLine, ValidElfAndDumpFilenames_DifferentBaseAddress_Valida
     m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
     m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = DEFAULT_SP_VALUE;
+    m_expectedRegisters.R[PSP] = DEFAULT_SP_VALUE;
+}
+
+TEST(CrashDebugCommandLine, ValidElfAndVersion3DumpFilenames_DifferentBaseAddress_ValidateMemoryAndRegisters)
+{
+    addArg("--elf");
+    addArg(g_elfFilename);
+    addArg("--dump");
+    addArg(g_dumpFilenameV3);
+    initElfFile();
+    m_elfFile.pgmHeader.p_paddr = 0x4000;
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00004000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00004004));
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0xA5A5A5A5;
+    m_expectedRegisters.R[PSP] = 0xBCBCBCBC;
 }

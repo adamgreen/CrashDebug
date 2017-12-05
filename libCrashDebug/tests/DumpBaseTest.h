@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -41,21 +41,36 @@ struct DumpFPFileTop : public DumpFileTop
     uint32_t     FPR[TOTAL_FPREG_COUNT];
 };
 
+struct DumpFileTopVersion2
+{
+    uint8_t  signature[4];
+    uint32_t flags;
+    uint32_t R[16+1];
+    uint32_t exceptionPSR;
+};
+
+struct DumpFPFileTopVersion2 : public DumpFileTopVersion2
+{
+    uint32_t     FPR[TOTAL_FPREG_COUNT];
+};
+
 
 class DumpBaseTest : public Utest
 {
 protected:
-    IMemory*        m_pMem;
-    RegisterContext m_actualRegisters;
-    RegisterContext m_expectedRegisters;
-    DumpFileTop     m_fileTop;
-    const char*     m_pTestFilename;
+    IMemory*            m_pMem;
+    RegisterContext     m_actualRegisters;
+    RegisterContext     m_expectedRegisters;
+    DumpFileTop         m_fileTop;
+    DumpFileTopVersion2 m_fileTopVersion2;
+    const char*         m_pTestFilename;
 
     void setup()
     {
         m_pMem = MemorySim_Init();
         initRegisterContext();
         initFileTop();
+        initFileTopVersion2();
     }
 
     void initRegisterContext()
@@ -78,6 +93,17 @@ protected:
         m_fileTop.flags = 0;
         for (size_t i = 0 ; i < ARRAY_SIZE(m_fileTop.R) ; i++)
             m_fileTop.R[i] = 0xDEADBEEF;
+    }
+
+    void initFileTopVersion2()
+    {
+        m_fileTopVersion2.signature[0] = CRASH_CATCHER_SIGNATURE_BYTE0;
+        m_fileTopVersion2.signature[1] = CRASH_CATCHER_SIGNATURE_BYTE1;
+        m_fileTopVersion2.signature[2] = 2;
+        m_fileTopVersion2.signature[3] = 0;
+        m_fileTopVersion2.flags = 0;
+        for (size_t i = 0 ; i < ARRAY_SIZE(m_fileTopVersion2.R) ; i++)
+            m_fileTopVersion2.R[i] = 0xDEADBEEF;
     }
 
     void teardown()

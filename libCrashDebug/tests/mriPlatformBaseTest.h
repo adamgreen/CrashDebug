@@ -43,6 +43,8 @@ extern "C"
 #define INITIAL_SP            0x10008000
 #define INITIAL_LR            0x00000000
 #define INITIAL_PC            0x10004000
+#define INITIAL_MSP           0xa5a5a5a5
+#define INITIAL_PSP           0x5a5a5a5a
 #define INITIAL_XPSR          EPSR_T
 #define INITIAL_EXCEPTION_PSR EPSR_T
 
@@ -86,6 +88,8 @@ protected:
         m_context.R[LR] = INITIAL_LR;
         m_context.R[PC] = INITIAL_PC;
         m_context.R[XPSR] = INITIAL_XPSR;
+        m_context.R[MSP] = INITIAL_MSP;
+        m_context.R[PSP] = INITIAL_PSP;
         m_context.exceptionPSR = INITIAL_EXCEPTION_PSR;
         m_emitAddress = INITIAL_PC;
 

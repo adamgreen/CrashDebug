@@ -1,4 +1,4 @@
-/*  Copyright (C) 2015  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -35,7 +35,9 @@
 #define LR              14
 #define PC              15
 #define XPSR            16
-#define TOTAL_REG_COUNT (XPSR + 1)
+#define MSP             17
+#define PSP             18
+#define TOTAL_REG_COUNT (PSP + 1)
 
 /* Register names /indices into the RegisterContext::FPR array of floating point registers. */
 #define S0                  0
@@ -80,6 +82,9 @@ typedef struct RegisterContext
     uint32_t exceptionPSR;
     uint32_t FPR[TOTAL_FPREG_COUNT];
 } RegisterContext;
+
+/* Default value to be placed in MSP and PSP if crash dump (ie. version 2.0) doesn't contain specific values. */
+#define DEFAULT_SP_VALUE 0xBAADBAAD
 
 
 __throws void mriPlatform_Init(RegisterContext* pContext, IMemory* pMem);
