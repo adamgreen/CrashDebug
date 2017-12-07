@@ -52,7 +52,7 @@ void StandardIComm_Uninit(IComm* pComm)
 /* IComm Interface Implementation. */
 static int hasReceiveData(IComm* pComm)
 {
-    int            hasData = FALSE;
+    volatile int hasData = FALSE;
 
     __try
     {

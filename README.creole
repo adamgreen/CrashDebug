@@ -89,8 +89,8 @@ tests.\\
 the unit tests.  **Windows** users would run {{{make CrashDebug.exe}}} instead.\\
 
 The build has been tested on the following operating systems:
-* macOS Sierra
-* Windows 7
+* macOS High Sierra
+* Windows 10
 * Ubuntu 16.04
 
 === GCOV Code Coverage Notes

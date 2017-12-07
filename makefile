@@ -1,4 +1,4 @@
-# Copyright 2014 Adam Green (https://github.com/adamgreen)
+# Copyright 2017 Adam Green (https://github.com/adamgreen)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ endif
 HOST_GCCFLAGS := -O2 -g3 -Wall -Wextra -Werror -Wno-unused-parameter -MMD -MP
 HOST_GCCFLAGS += -ffunction-sections -fdata-sections -fno-common
 HOST_GCCFLAGS += -include mri/CppUTest/include/CppUTest/MemoryLeakDetectorMallocMacros.h
-HOST_GPPFLAGS := $(HOST_GCCFLAGS) -include mri/CppUTest/include/CppUTest/MemoryLeakDetectorNewMacros.h
+HOST_GPPFLAGS := $(HOST_GCCFLAGS) -std=gnu++98 -include mri/CppUTest/include/CppUTest/MemoryLeakDetectorNewMacros.h
 HOST_GCCFLAGS += -std=gnu90
 HOST_ASFLAGS  := -g -x assembler-with-cpp -MMD -MP
 
