@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -264,10 +264,21 @@ TEST(ElfLoad, WriteablePageEntry_ValidateMemoryContents)
 {
     ElfFile1 testElf;
     initElfFile(&testElf);
+    testElf.pgmHeader.p_paddr = 0x10000000;
     testElf.pgmHeader.p_flags |= PF_W;
         ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf));
-    CHECK_EQUAL(0x10008000, IMemory_Read32(m_pMemory, 0));
-    CHECK_EQUAL(0x00000100, IMemory_Read32(m_pMemory, 4));
+    CHECK_EQUAL(0x10008000, IMemory_Read32(m_pMemory, 0x10000000));
+    CHECK_EQUAL(0x00000100, IMemory_Read32(m_pMemory, 0x10000004));
+}
+
+TEST(ElfLoad, WriteablePageEntry_WherePaddrMatchesVaddr_ShouldLoadZeroRegionsAndThrowException)
+{
+    ElfFile1 testElf;
+    initElfFile(&testElf);
+    testElf.pgmHeader.p_flags |= PF_W;
+        __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
+    CHECK_EQUAL(elfFormatException, getExceptionCode());
+    clearExceptionCode();
 }
 
 TEST(ElfLoad, ReadOnlyNonExecutablePageEntry_ValidateMemoryContents)

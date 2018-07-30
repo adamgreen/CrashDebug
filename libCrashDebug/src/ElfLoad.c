@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -117,5 +117,6 @@ static int isFlashLoadableEntry(const Elf32_Phdr* pHeader)
 {
     return (pHeader->p_type == PT_LOAD &&
             pHeader->p_filesz != 0 &&
-            pHeader->p_memsz >= pHeader->p_filesz);
+            pHeader->p_memsz >= pHeader->p_filesz &&
+            ((pHeader->p_flags & PF_W) == 0 || pHeader->p_paddr != pHeader->p_vaddr));
 }
