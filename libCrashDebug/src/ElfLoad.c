@@ -107,7 +107,7 @@ static void loadIfFlashLoadableEntry(IMemory* pMemory, LoadObject* pObject, cons
         return;
 
     pData = fetchSizedByteArray(&pObject->sizedBlob, pPgmHeader->p_offset, pPgmHeader->p_filesz);
-    MemorySim_CreateRegion(pMemory, pPgmHeader->p_paddr, pPgmHeader->p_memsz);
+    MemorySim_CreateRegion(pMemory, pPgmHeader->p_paddr, pPgmHeader->p_filesz);
     MemorySim_LoadFromFlashImage(pMemory, pPgmHeader->p_paddr, pData, pPgmHeader->p_filesz);
     MemorySim_MakeRegionReadOnly(pMemory, pPgmHeader->p_paddr);
     pObject->entryLoadCount++;
@@ -117,6 +117,5 @@ static int isFlashLoadableEntry(const Elf32_Phdr* pHeader)
 {
     return (pHeader->p_type == PT_LOAD &&
             pHeader->p_filesz != 0 &&
-            pHeader->p_memsz >= pHeader->p_filesz &&
-            ((pHeader->p_flags & PF_W) == 0 || pHeader->p_paddr != pHeader->p_vaddr));
+            pHeader->p_memsz >= pHeader->p_filesz);
 }

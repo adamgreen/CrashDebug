@@ -271,16 +271,6 @@ TEST(ElfLoad, WriteablePageEntry_ValidateMemoryContents)
     CHECK_EQUAL(0x00000100, IMemory_Read32(m_pMemory, 0x10000004));
 }
 
-TEST(ElfLoad, WriteablePageEntry_WherePaddrMatchesVaddr_ShouldLoadZeroRegionsAndThrowException)
-{
-    ElfFile1 testElf;
-    initElfFile(&testElf);
-    testElf.pgmHeader.p_flags |= PF_W;
-        __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
-    CHECK_EQUAL(elfFormatException, getExceptionCode());
-    clearExceptionCode();
-}
-
 TEST(ElfLoad, ReadOnlyNonExecutablePageEntry_ValidateMemoryContents)
 {
     ElfFile1 testElf;
@@ -291,14 +281,18 @@ TEST(ElfLoad, ReadOnlyNonExecutablePageEntry_ValidateMemoryContents)
     CHECK_EQUAL(0x00000100, IMemory_Read32(m_pMemory, 4));
 }
 
-TEST(ElfLoad, FileSizeSmallerThanMemSize_ValidateMemoryContents_ShouldZeroExtraWord)
+TEST(ElfLoad, FileSizeSmallerThanMemSize_ValidateMemoryContents_ShouldTruncateToFileSize)
 {
     ElfFile1 testElf;
     initElfFile(&testElf);
     testElf.pgmHeader.p_filesz = sizeof(uint32_t);
         ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf));
     CHECK_EQUAL(0x10008000, IMemory_Read32(m_pMemory, 0));
-    CHECK_EQUAL(0x00000000, IMemory_Read32(m_pMemory, 4));
+
+    // Verify that no zero extending has occurred and that reading second word will fail.
+    __try_and_catch( IMemory_Read32(m_pMemory, 4) );
+    CHECK_EQUAL(busErrorException, getExceptionCode());
+    clearExceptionCode();
 }
 
 TEST(ElfLoad, LoadFromSecondProgramHeaderEntry_ValidateMemoryContents)
