@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -35,13 +35,9 @@ int main(int argc, const char** argv)
         switch (getExceptionCode())
         {
         case fileException:
-            fprintf(stderr, "Failed to open specified image/dump file.\n");
-            break;
         case elfFormatException:
-            fprintf(stderr, "The .elf file isn't of a supported format.\n");
-            break;
         case invalidArgumentException:
-            fprintf(stderr, "Invalid command line parameter.\n");
+            // Appropriate error message will already have been displayed by CrashDebugCommandLine module.
             break;
         default:
             fprintf(stderr, "Encountered unexpected error: %d\n", getExceptionCode());

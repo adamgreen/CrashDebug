@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -14,4 +14,5 @@
 #include "try_catch.h"
 
 ExceptionHandler* g_pExceptionHandlers;
+char              g_exceptionMessage[1024];
 int               g_exceptionCode;

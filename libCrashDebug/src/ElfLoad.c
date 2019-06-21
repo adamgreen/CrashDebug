@@ -1,4 +1,4 @@
-/*  Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -45,7 +45,8 @@ __throws void ElfLoad_FromMemory(IMemory* pMemory, const void* pElf, size_t elfS
     validateElfHeaderContents(object.pElfHeader);
     loadFlashLoadableEntries(pMemory, &object);
     if (object.entryLoadCount == 0)
-        __throw(elfFormatException);
+        __throw_msg(elfFormatException,
+                    "ELF contained no entries which were loadable and had a valid non-zero filesz <= to memsz.");
 }
 
 static LoadObject initLoadObject(const char* pBlob, size_t blobSize)
@@ -54,7 +55,10 @@ static LoadObject initLoadObject(const char* pBlob, size_t blobSize)
 
     memset(&object, 0, sizeof(object));
     object.sizedBlob = initSizedBlob(pBlob, blobSize);
-    object.pElfHeader = fetchSizedByteArray(&object.sizedBlob, 0, sizeof(*object.pElfHeader));
+    __try
+        object.pElfHeader = fetchSizedByteArray(&object.sizedBlob, 0, sizeof(*object.pElfHeader));
+    __catch
+        __throw_msg(getExceptionCode(), "ELF was too short to contain valid header.");
     return object;
 }
 
@@ -74,16 +78,23 @@ static const void* fetchSizedByteArray(const SizedBlob* pBlob, uint32_t offset, 
 static void validateElfHeaderContents(const Elf32_Ehdr* pHeader)
 {
     const unsigned char expectedIdent[4] = { ELFMAG0, ELFMAG1, ELFMAG2, ELFMAG3 };
-    if (memcmp(pHeader->e_ident, expectedIdent, sizeof(expectedIdent)) != 0 ||
-        pHeader->e_ident[EI_CLASS] != ELFCLASS32 ||
-        pHeader->e_ident[EI_DATA] != ELFDATA2LSB ||
-        pHeader->e_type != ET_EXEC ||
-        pHeader->e_phoff == 0 ||
-        pHeader->e_phnum == 0 ||
-        pHeader->e_phentsize < sizeof(Elf32_Phdr))
-    {
-        __throw(elfFormatException);
-    }
+
+    if (memcmp(pHeader->e_ident, expectedIdent, sizeof(expectedIdent)) != 0)
+        __throw_msg(elfFormatException, "ELF header doesn't start with expected magic ELF identifier.");
+    if (pHeader->e_ident[EI_CLASS] != ELFCLASS32)
+        __throw_msg(elfFormatException, "ELF header doesn't contain 32-bit flag.");
+    if (pHeader->e_ident[EI_DATA] != ELFDATA2LSB)
+        __throw_msg(elfFormatException, "ELF header doesn't contain little endian flag.");
+    if (pHeader->e_type != ET_EXEC)
+        __throw_msg(elfFormatException, "ELF header doesn't contain executable flag.");
+    if (pHeader->e_phoff == 0)
+        __throw_msg(elfFormatException, "ELF header contains an invalid offset of 0 for the page headers.");
+    if (pHeader->e_phnum == 0)
+        __throw_msg(elfFormatException, "ELF header contains an invalid page header entry count of 0.");
+    if (pHeader->e_phentsize < sizeof(Elf32_Phdr))
+        __throw_msg(elfFormatException,
+                    "ELF header contains a page header entry size of %d, which is smaller than the expected size of %lu.",
+                    pHeader->e_phentsize, sizeof(Elf32_Phdr));
 }
 
 static void loadFlashLoadableEntries(IMemory* pMemory, LoadObject* pObject)
@@ -93,7 +104,16 @@ static void loadFlashLoadableEntries(IMemory* pMemory, LoadObject* pObject)
 
     for (i = 0, pObject->pgmHeaderOffset = pObject->pElfHeader->e_phoff ; i < pObject->pElfHeader->e_phnum ; i++)
     {
-        pPgmHeader = fetchSizedByteArray(&pObject->sizedBlob, pObject->pgmHeaderOffset, sizeof(*pPgmHeader));
+        __try
+        {
+            pPgmHeader = fetchSizedByteArray(&pObject->sizedBlob, pObject->pgmHeaderOffset, sizeof(*pPgmHeader));
+        }
+        __catch
+        {
+            __throw_msg(getExceptionCode(),
+                        "ELF page header entry %d is at an invalid file offset of %u.",
+                        i, pObject->pgmHeaderOffset);
+        }
         loadIfFlashLoadableEntry(pMemory, pObject, pPgmHeader);
         pObject->pgmHeaderOffset += pObject->pElfHeader->e_phentsize;
     }
@@ -106,7 +126,16 @@ static void loadIfFlashLoadableEntry(IMemory* pMemory, LoadObject* pObject, cons
     if (!isFlashLoadableEntry(pPgmHeader))
         return;
 
-    pData = fetchSizedByteArray(&pObject->sizedBlob, pPgmHeader->p_offset, pPgmHeader->p_filesz);
+    __try
+    {
+        pData = fetchSizedByteArray(&pObject->sizedBlob, pPgmHeader->p_offset, pPgmHeader->p_filesz);
+    }
+    __catch
+    {
+        __throw_msg(getExceptionCode(),
+                    "ELF failed to load entry from file at offsets %d to %d.",
+                    pPgmHeader->p_offset, pPgmHeader->p_offset + pPgmHeader->p_filesz - 1);
+    }
     MemorySim_CreateRegion(pMemory, pPgmHeader->p_paddr, pPgmHeader->p_filesz);
     MemorySim_LoadFromFlashImage(pMemory, pPgmHeader->p_paddr, pData, pPgmHeader->p_filesz);
     MemorySim_MakeRegionReadOnly(pMemory, pPgmHeader->p_paddr);

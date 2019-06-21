@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -21,6 +21,7 @@ DUMP_TEST(InvalidLogFilename_ShouldThrowFileException)
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, "invalidDumpFilename.dmp") );
     CHECK_EQUAL(fileException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("Failed to open the \"invalidDumpFilename.dmp\" dump file.", getExceptionMessage());
 }
 
 DUMP_TEST(InvalidSignature_ShouldThrowFileFormatException)
@@ -30,6 +31,7 @@ DUMP_TEST(InvalidSignature_ShouldThrowFileFormatException)
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, m_pTestFilename) );
     CHECK_EQUAL(fileFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("The dump file didn't start with the expected 4-byte signature.", getExceptionMessage());
 }
 
 DUMP_TEST(FailSignatureRead_ShouldThrowFileFormatException)
@@ -39,6 +41,7 @@ DUMP_TEST(FailSignatureRead_ShouldThrowFileFormatException)
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, m_pTestFilename) );
     CHECK_EQUAL(fileFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("The dump file was too short to contain the 4-byte signature.", getExceptionMessage());
 }
 
 DUMP_TEST(FileTooShortForFlags_ShouldThrowFileFormatException)
@@ -47,6 +50,7 @@ DUMP_TEST(FileTooShortForFlags_ShouldThrowFileFormatException)
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, m_pTestFilename) );
     CHECK_EQUAL(fileFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("The dump file was too short to contain the flags.", getExceptionMessage());
 }
 
 DUMP_TEST(FileTooShortForExceptionPSR_ShouldThrowFileFormatException)
@@ -55,6 +59,7 @@ DUMP_TEST(FileTooShortForExceptionPSR_ShouldThrowFileFormatException)
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, m_pTestFilename) );
     CHECK_EQUAL(fileFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("The dump file was too short to contain the exception PSR.", getExceptionMessage());
 }
 
 DUMP_TEST(FileTooShortForIntegerRegisters_ShouldThrowFileFormatException)
@@ -63,6 +68,7 @@ DUMP_TEST(FileTooShortForIntegerRegisters_ShouldThrowFileFormatException)
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, m_pTestFilename) );
     CHECK_EQUAL(fileFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("The dump file was too short to contain the integer registers.", getExceptionMessage());
 }
 
 DUMP_TEST(DumpContainingRegistersOnly_VerifyRegistersReadAndEmptyMemoryRegions)
@@ -287,6 +293,7 @@ DUMP_TEST(FileTooShortForFloatRegisters_ShouldThrowFileFormatException)
     CHECK_EQUAL(fileFormatException, getExceptionCode());
     clearExceptionCode();
     m_expectedRegisters.flags = CRASH_CATCHER_FLAGS_FLOATING_POINT;
+    STRCMP_EQUAL("The dump file was too short to contain the floating point registers.", getExceptionMessage());
 }
 
 DUMP_TEST(DumpContainingOneMemoryRegionOf1Word_VerifyMemoryContents)
@@ -330,6 +337,7 @@ DUMP_TEST(FailAllocationForRegion_VerifyEmptyMemoryAndExceptionThrown)
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, m_pTestFilename) );
     CHECK_EQUAL(outOfMemoryException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("The dump file failed to load RAM memory region at 0x10000000 - 0x10000004.", getExceptionMessage());
     validateNoMemoryRegionsCreated();
 }
 
@@ -349,6 +357,7 @@ DUMP_TEST(DumpContainingTruncatedMemoryRegionDescription_ExceptionShouldBeThrown
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, m_pTestFilename) );
     CHECK_EQUAL(fileFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("The dump file contained a truncated memory region header.", getExceptionMessage());
     validateNoMemoryRegionsCreated();
 }
 
@@ -368,6 +377,7 @@ DUMP_TEST(DumpContainingTruncatedMemoryRegionData_ExceptionShouldBeThrown_Partia
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, m_pTestFilename) );
     CHECK_EQUAL(fileFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("The dump file failed to load RAM memory region at 0x10000000 - 0x10000004.", getExceptionMessage());
     static const char* xmlForMemory = "<?xml version=\"1.0\"?>"
                                       "<!DOCTYPE memory-map PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\" \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
                                       "<memory-map>"
@@ -427,6 +437,7 @@ DUMP_TEST(DumpContainingOneMemoryRegionsFollowedByStackOverflowError_VerifyMemor
         __try_and_catch( CRASH_CATCHER_DUMP_READ_FUNC(m_pMem, &m_actualRegisters, m_pTestFilename) );
     CHECK_EQUAL(stackOverflowException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("The dump file ended with an indication that CrashCatcher detected a stack overflow.", getExceptionMessage());
     static const char* xmlForMemory = "<?xml version=\"1.0\"?>"
                                       "<!DOCTYPE memory-map PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\" \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
                                       "<memory-map>"

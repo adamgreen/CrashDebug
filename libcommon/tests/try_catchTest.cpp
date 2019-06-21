@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -21,6 +21,7 @@ extern "C"
 TEST_GROUP(TryCatch)
 {
     int m_exceptionThrown;
+    char m_longMessage[sizeof(g_exceptionMessage)+1];
 
     void setup()
     {
@@ -190,4 +191,72 @@ TEST(TryCatch, RethrowUndefinedExceptionAndSkipAssignment)
 
     LONGS_EQUAL( -2, value );
     validateException(undefinedException);
+}
+
+TEST(TryCatch, throwWithSimpleMessage)
+{
+    __try
+        __throw_msg(undefinedException, "throw message");
+    __catch
+        flagExceptionHit();
+
+    validateException(undefinedException);
+    STRCMP_EQUAL("throw message", getExceptionMessage());
+}
+
+TEST(TryCatch, throwWithFormattedMessage)
+{
+    __try
+        __throw_msg(undefinedException, "throw message #%d", 1);
+    __catch
+        flagExceptionHit();
+
+    validateException(undefinedException);
+    STRCMP_EQUAL("throw message #1", getExceptionMessage());
+}
+
+TEST(TryCatch, throwWithLongestMessage)
+{
+    memset(m_longMessage, '_', sizeof(m_longMessage));
+    m_longMessage[sizeof(g_exceptionMessage)-1] = '\0';
+    __try
+        __throw_msg(undefinedException, "%s", m_longMessage);
+    __catch
+        flagExceptionHit();
+
+    validateException(undefinedException);
+    STRCMP_EQUAL(m_longMessage, getExceptionMessage());
+}
+
+TEST(TryCatch, throwWithTooLongMessageShoudTruncate)
+{
+    memset(m_longMessage, '_', sizeof(m_longMessage));
+    m_longMessage[sizeof(g_exceptionMessage)] = '\0';
+    __try
+        __throw_msg(undefinedException, "%s", m_longMessage);
+    __catch
+        flagExceptionHit();
+
+    validateException(undefinedException);
+    m_longMessage[sizeof(g_exceptionMessage)-1] = '\0';
+    STRCMP_EQUAL(m_longMessage, getExceptionMessage());
+}
+
+
+TEST(TryCatch, subsequentTryClearsExceptionMessage)
+{
+    __try
+        __throw_msg(undefinedException, "throw message");
+    __catch
+        flagExceptionHit();
+    validateException(undefinedException);
+    STRCMP_EQUAL("throw message", getExceptionMessage());
+
+    m_exceptionThrown = 0;
+    __try
+        throwNoException();
+    __catch
+        flagExceptionHit();
+    validateException(noException);
+    STRCMP_EQUAL("", getExceptionMessage());
 }

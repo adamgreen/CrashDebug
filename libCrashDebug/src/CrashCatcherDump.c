@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -96,7 +96,7 @@ static FILE* openFileAndThrowOnError(const char* pLogFilename)
 {
     FILE* pLogFile = fopen(pLogFilename, "rb");
     if (!pLogFile)
-        __throw(fileException);
+        __throw_msg(fileException, "Failed to open the \"%s\" dump file.", pLogFilename);
     return pLogFile;
 }
 
@@ -123,8 +123,8 @@ static void validateDumpSignature(Object* pObject)
     int                  result = -1;
 
     result = pObject->read(pObject, actualSignature, sizeof(actualSignature));
-    if (result == -1)
-        __throw(fileFormatException);
+    if (result != sizeof(actualSignature))
+        __throw_msg(fileFormatException, "The dump file was too short to contain the 4-byte signature.");
     if (0 == memcmp(actualSignature, expectedSignature, sizeof(actualSignature)))
         return;
     if (0 == memcmp(actualSignature, expectedVersion2Signature, sizeof(actualSignature)))
@@ -132,14 +132,14 @@ static void validateDumpSignature(Object* pObject)
         pObject->isVersion2Dump = 1;
         return;
     }
-    __throw(fileFormatException);
+    __throw_msg(fileFormatException, "The dump file didn't start with the expected 4-byte signature.");
 }
 
 static void readFlags(Object* pObject)
 {
     int result = pObject->read(pObject, &pObject->pContext->flags, sizeof(pObject->pContext->flags));
     if (result != sizeof(pObject->pContext->flags))
-        __throw(fileFormatException);
+        __throw_msg(fileFormatException, "The dump file was too short to contain the flags.");
 }
 
 static void readIntegerRegisters(Object* pObject)
@@ -152,14 +152,14 @@ static void readIntegerRegisters(Object* pObject)
         pObject->pContext->R[MSP] = DEFAULT_SP_VALUE;
         pObject->pContext->R[PSP] = DEFAULT_SP_VALUE;
     }
-    
+
     int result = pObject->read(pObject, pObject->pContext->R, integerContextSize);
     if (result != integerContextSize)
-        __throw(fileFormatException);
+        __throw_msg(fileFormatException, "The dump file was too short to contain the integer registers.");
 
     result = pObject->read(pObject, &pObject->pContext->exceptionPSR, sizeof(uint32_t));
     if (result != sizeof(uint32_t))
-        __throw(fileFormatException);
+        __throw_msg(fileFormatException, "The dump file was too short to contain the exception PSR.");
 }
 
 static void readFloatingPointRegisters(Object* pObject)
@@ -169,7 +169,7 @@ static void readFloatingPointRegisters(Object* pObject)
 
     int result = pObject->read(pObject, pObject->pContext->FPR, sizeof(pObject->pContext->FPR));
     if (result != sizeof(pObject->pContext->FPR))
-        __throw(fileFormatException);
+        __throw_msg(fileFormatException, "The dump file was too short to contain the floating point registers.");
 }
 
 static void readMemoryRegions(Object* pObject)
@@ -189,13 +189,23 @@ static int readNextMemoryRegion(Object* pObject)
 
     bytesRead = pObject->read(pObject, &regionOrSentinel, sizeof(regionOrSentinel));
     if (isStackOverflowSentinelInsteadOfRegionDescription(bytesRead, &regionOrSentinel))
-        __throw(stackOverflowException);
+        __throw_msg(stackOverflowException, "The dump file ended with an indication that CrashCatcher detected a stack overflow.");
     else if (bytesRead == 0)
         return TRUE;
     else if (bytesRead != sizeof(regionOrSentinel.region))
-        __throw(fileFormatException);
+        __throw_msg(fileFormatException, "The dump file contained a truncated memory region header.");
 
-    createAndLoadMemoryRegion(pObject, &regionOrSentinel.region);
+    __try
+    {
+        createAndLoadMemoryRegion(pObject, &regionOrSentinel.region);
+    }
+    __catch
+    {
+        __throw_msg(getExceptionCode(),
+                    "The dump file failed to load RAM memory region at 0x%08X - 0x%08X.",
+                    regionOrSentinel.region.startAddress, regionOrSentinel.region.endAddress);
+    }
+
     return FALSE;
 }
 

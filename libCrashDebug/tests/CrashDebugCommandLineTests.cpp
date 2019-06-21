@@ -203,11 +203,13 @@ TEST_GROUP(CrashDebugCommandLine)
         m_argv[m_argc++] = pArg;
     }
 
-    void validateExceptionThrownAndUsageStringDisplayed(int expectedException = invalidArgumentException)
+    void validateExceptionThrownAndUsageStringDisplayed(int expectedException, const char* pExpectedExceptionMessage)
     {
         CHECK_EQUAL(expectedException, getExceptionCode());
-        STRCMP_EQUAL(g_usageString, printfSpy_GetLastOutput());
         clearExceptionCode();
+        STRCMP_EQUAL(pExpectedExceptionMessage, getExceptionMessage());
+        STRCMP_EQUAL("ERROR:", printfSpy_GetLastErrorOutput());
+        STRCMP_EQUAL(g_usageString, printfSpy_GetLastOutput());
     }
 
     void createTestFiles()
@@ -284,7 +286,7 @@ TEST_GROUP(CrashDebugCommandLine)
 TEST(CrashDebugCommandLine, NoParameters_ShouldThrow)
 {
     __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "Must provide --bin or --elf command line option.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -293,7 +295,7 @@ TEST(CrashDebugCommandLine, NotDoubleSlashArgument_ShouldThrowAsNotAllowedForThi
     addArg(g_imageFilename);
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "Command line options must start with \"--\".");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -302,7 +304,7 @@ TEST(CrashDebugCommandLine, InvalidCommandLineFlag_ShouldThrow)
     addArg("--foo");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "\"--foo\" isn't a valid command line option.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -313,7 +315,7 @@ TEST(CrashDebugCommandLine, JustImageFilename_ShouldThrowAsDumpFilenameIsRequire
     addArg("0x0");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "Must provide --dump command line option.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -324,7 +326,7 @@ TEST(CrashDebugCommandLine, LeaveOffImageFilenameAndBaseAddress_ShouldThrow)
     addArg("--bin");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "The --bin command line option requires filename and base address.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -336,7 +338,7 @@ TEST(CrashDebugCommandLine, LeaveOffBaseAddress_ShouldThrow)
     addArg(g_imageFilename);
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "The --bin command line option requires filename and base address.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -348,7 +350,7 @@ TEST(CrashDebugCommandLine, LeaveOffDumpFilename_ShouldThrow)
     addArg("--dump");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "The --dump command line option requires filename.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -650,7 +652,7 @@ TEST(CrashDebugCommandLine, FailImageFileOpen_ShouldThrow)
     createTestFiles();
     fopenSetReturn(NULL);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed(fileException);
+    validateExceptionThrownAndUsageStringDisplayed(fileException, "Failed to open \"image.bin\".");
 }
 
 TEST(CrashDebugCommandLine, FailImageFileSeekInGetFileSize_ShouldThrow)
@@ -663,7 +665,7 @@ TEST(CrashDebugCommandLine, FailImageFileSeekInGetFileSize_ShouldThrow)
     createTestFiles();
     fseekSetReturn(-1);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed(fileException);
+    validateExceptionThrownAndUsageStringDisplayed(fileException, "Failed to get file size of \"image.bin\".");
 }
 
 TEST(CrashDebugCommandLine, FailImageFileBufferAllocation_ShouldThrow)
@@ -676,7 +678,7 @@ TEST(CrashDebugCommandLine, FailImageFileBufferAllocation_ShouldThrow)
     createTestFiles();
     MallocFailureInject_FailAllocation(1);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed(outOfMemoryException);
+    validateExceptionThrownAndUsageStringDisplayed(outOfMemoryException, "Failed to allocate 8 bytes for reading \"image.bin\".");
 }
 
 TEST(CrashDebugCommandLine, FailImageFileRead_ShouldThrow)
@@ -689,7 +691,7 @@ TEST(CrashDebugCommandLine, FailImageFileRead_ShouldThrow)
     createTestFiles();
     freadFail(-1);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed(fileException);
+    validateExceptionThrownAndUsageStringDisplayed(fileException, "Failed to read \"image.bin\".");
 }
 
 TEST(CrashDebugCommandLine, FailMemoryRegionAllocation_ShouldThrow)
@@ -702,7 +704,7 @@ TEST(CrashDebugCommandLine, FailMemoryRegionAllocation_ShouldThrow)
     createTestFiles();
     MallocFailureInject_FailAllocation(2);
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed(outOfMemoryException);
+    validateExceptionThrownAndUsageStringDisplayed(outOfMemoryException, "Failed to load read-only code into memory region at address 0x00000000.");
 }
 
 TEST(CrashDebugCommandLine, InvalidDumpFilename_ShouldThrow)
@@ -714,7 +716,7 @@ TEST(CrashDebugCommandLine, InvalidDumpFilename_ShouldThrow)
     addArg("invalidFilename.dmp");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed(fileException);
+    validateExceptionThrownAndUsageStringDisplayed(fileException, "Failed to open \"invalidFilename.dmp\".");
 }
 
 TEST(CrashDebugCommandLine, ValidElfAndVersion2DumpFilenames_ValidateMemoryAndRegisters)
@@ -797,7 +799,7 @@ TEST(CrashDebugCommandLine, LeaveOffElfFilename_ShouldThrow)
     initElfFile();
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "The --elf command line option requires filename.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -811,7 +813,7 @@ TEST(CrashDebugCommandLine, InvalidElfSignature_ShouldThrow)
     m_elfFile.elfHeader.e_ident[EI_MAG0] += 1;
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed(elfFormatException);
+    validateExceptionThrownAndUsageStringDisplayed(elfFormatException, "ELF header doesn't start with expected magic ELF identifier.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 

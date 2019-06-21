@@ -27,7 +27,7 @@
 
 static void displayCopyrightNotice(void)
 {
-    printf("CrashDebug - Cortex-M Post-Mortem Debugging Aid (" VERSION_STRING ")\n\n"
+    printf("\nCrashDebug - Cortex-M Post-Mortem Debugging Aid (" VERSION_STRING ")\n\n"
            COPYRIGHT_NOTICE
            "\n");
 }
@@ -99,6 +99,7 @@ static int hasHexCrashCatcherSignature(const uint8_t* pHeader);
 static uint8_t hiNibbleDigit(uint8_t byte);
 static uint8_t loNibbleDigit(uint8_t byte);
 static uint8_t nibbleDigit(uint8_t byte);
+static void displayExceptionMessage(void);
 
 
 __throws void CrashDebugCommandLine_Init(CrashDebugCommandLine* pThis, int volatile argc, const char** volatile argv)
@@ -115,6 +116,7 @@ __throws void CrashDebugCommandLine_Init(CrashDebugCommandLine* pThis, int volat
     }
     __catch
     {
+        displayExceptionMessage();
         displayCopyrightNotice();
         displayUsage();
         MemorySim_Uninit(pThis->pMemory);
@@ -138,7 +140,7 @@ static int parseArgument(CrashDebugCommandLine* pThis, int argc, const char** pp
     if (hasDoubleDashPrefix(*ppArgs))
         return parseFlagArgument(pThis, argc, ppArgs, pass);
     else
-        __throw(invalidArgumentException);
+        __throw_msg(invalidArgumentException, "Command line options must start with \"--\".");
 }
 
 static int hasDoubleDashPrefix(const char* pArgument)
@@ -157,13 +159,13 @@ static int parseFlagArgument(CrashDebugCommandLine* pThis, int argc, const char*
     else if (0 == strcasecmp(*ppArgs, "--alias"))
         return parseAliasOption(pThis, argc - 1, &ppArgs[1], pass);
     else
-        __throw(invalidArgumentException);
+        __throw_msg(invalidArgumentException, "\"%s\" isn't a valid command line option.", *ppArgs);
 }
 
 static int parseBinFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
 {
     if (argc < 2)
-        __throw(invalidArgumentException);
+        __throw_msg(invalidArgumentException, "The --bin command line option requires filename and base address.");
 
     if (pass == FIRST_PASS)
     {
@@ -176,7 +178,7 @@ static int parseBinFilenameOption(CrashDebugCommandLine* pThis, int argc, const 
 static int parseElfFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
 {
     if (argc < 1)
-        __throw(invalidArgumentException);
+        __throw_msg(invalidArgumentException, "The --elf command line option requires filename.");
 
     if (pass == FIRST_PASS)
         pThis->pElfFilename = ppArgs[0];
@@ -186,7 +188,7 @@ static int parseElfFilenameOption(CrashDebugCommandLine* pThis, int argc, const 
 static int parseDumpFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
 {
     if (argc < 1)
-        __throw(invalidArgumentException);
+        __throw_msg(invalidArgumentException, "The --dump command line option requires filename.");
 
     if (pass == FIRST_PASS)
         pThis->pDumpFilename = ppArgs[0];
@@ -210,8 +212,10 @@ static int parseAliasOption(CrashDebugCommandLine* pThis, int argc, const char**
 
 static void throwIfRequiredArgumentNotSpecified(CrashDebugCommandLine* pThis)
 {
-    if ((!pThis->pBinFilename && !pThis->pElfFilename) || !pThis->pDumpFilename)
-        __throw(invalidArgumentException);
+    if (!pThis->pBinFilename && !pThis->pElfFilename)
+        __throw_msg(invalidArgumentException, "Must provide --bin or --elf command line option.");
+    if (!pThis->pDumpFilename)
+        __throw_msg(invalidArgumentException, "Must provide --dump command line option.");
 }
 
 static void loadImageFile(CrashDebugCommandLine* pThis)
@@ -252,16 +256,19 @@ static FileData loadFileData(const char* pFilename)
 
         pFile = fopen(pFilename, "rb");
         if (!pFile)
-            __throw(fileException);
-        fileSize = GetFileSize(pFile);
+            __throw_msg(fileException, "Failed to open \"%s\".", pFilename);
+        __try
+            fileSize = GetFileSize(pFile);
+        __catch
+            __throw_msg(getExceptionCode(), "Failed to get file size of \"%s\".", pFilename);
 
         pBuffer = malloc(fileSize);
         if (!pBuffer)
-            __throw(outOfMemoryException);
+            __throw_msg(outOfMemoryException, "Failed to allocate %ld bytes for reading \"%s\".", fileSize, pFilename);
 
         bytesRead = fread(pBuffer, 1, fileSize, pFile);
         if ((long)bytesRead != fileSize)
-            __throw(fileException);
+            __throw_msg(fileException, "Failed to read \"%s\".", pFilename);
 
         fclose(pFile);
     }
@@ -280,9 +287,16 @@ static FileData loadFileData(const char* pFilename)
 
 static void loadBinFile(CrashDebugCommandLine* pThis, volatile FileData* pFileData)
 {
-    MemorySim_CreateRegion(pThis->pMemory, pThis->baseAddress, pFileData->dataSize);
-    MemorySim_LoadFromFlashImage(pThis->pMemory, pThis->baseAddress, pFileData->pData, pFileData->dataSize);
-    MemorySim_MakeRegionReadOnly(pThis->pMemory, pThis->baseAddress);
+    __try
+    {
+        MemorySim_CreateRegion(pThis->pMemory, pThis->baseAddress, pFileData->dataSize);
+        MemorySim_LoadFromFlashImage(pThis->pMemory, pThis->baseAddress, pFileData->pData, pFileData->dataSize);
+        MemorySim_MakeRegionReadOnly(pThis->pMemory, pThis->baseAddress);
+    }
+    __catch
+    {
+        __throw_msg(getExceptionCode(), "Failed to load read-only code into memory region at address 0x%08X.", pThis->baseAddress);
+    }
 }
 
 static void loadDumpFile(CrashDebugCommandLine* pThis)
@@ -307,7 +321,7 @@ static DumpFileType getFileType(const char* pDumpFilename)
 
     FILE*   pFile = fopen(pDumpFilename, "rb");
     if (!pFile)
-        __throw(fileException);
+        __throw_msg(fileException, "Failed to open \"%s\".", pDumpFilename);
     fread(fileHeader, 1, sizeof(fileHeader), pFile);
     fclose(pFile);
 
@@ -346,6 +360,14 @@ static uint8_t nibbleDigit(uint8_t byte)
 {
     static const uint8_t nibbleToHexDigit[] = "0123456789ABCDEF";
     return nibbleToHexDigit[byte];
+}
+
+static void displayExceptionMessage(void)
+{
+    const char* pExceptionMessage = getExceptionMessage();
+    if (pExceptionMessage[0] == '\0')
+        return;
+    fprintf(stderr, "ERROR: %s\n", pExceptionMessage);
 }
 
 

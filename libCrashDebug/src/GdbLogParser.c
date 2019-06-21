@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -112,7 +112,7 @@ static FILE* openFileAndThrowOnError(const char* pLogFilename)
 {
     FILE* pLogFile = fopen(pLogFilename, "r");
     if (!pLogFile)
-        __throw(fileException);
+        __throw_msg(fileException, "Failed to open \"%s\" GDB log.", pLogFilename);
     return pLogFile;
 }
 
@@ -429,5 +429,5 @@ static void rewindLogFileAndThrowOnError(FILE* pLogFile)
 {
     int seekResult = fseek(pLogFile, SEEK_SET, 0);
     if (seekResult == -1)
-        __throw(fileException);
+        __throw_msg(fileException, "Failed to rewind GDB log for second pass.");
 }

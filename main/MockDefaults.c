@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -25,6 +25,7 @@ void*  (*hook_malloc)(size_t size) = malloc;
 void*  (*hook_realloc)(void* ptr, size_t size) = realloc;
 void   (*hook_free)(void* ptr) = free;
 int    (*hook_printf)(const char* pFormat, ...) = printf;
+int    (*hook_fprintf)(FILE* pFile, const char* pFormat, ...) = fprintf;
 
 
 /* Provide different implementation of Console* functions depending on whether building for a Posix or Windows OS. */
@@ -74,7 +75,7 @@ void Console_WriteStdOut(int character)
     char   c = (char)character;
     DWORD  bytesWritten = 0;
     BOOL   result = FALSE;
-    
+
     initStdIo();
     result = WriteFile(g_stdOut, &c, sizeof(c), &bytesWritten, NULL);
     if (!result || bytesWritten != sizeof(c))

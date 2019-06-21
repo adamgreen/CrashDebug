@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -56,6 +56,7 @@ TEST(GdbLogParser, InvalidLogFilename_ShouldThrowMSPandPSPnotInit)
         __try_and_catch( GdbLogParse(m_pMem, &m_actualRegisters, "invalid_file.log") );
     CHECK_EQUAL(fileException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("Failed to open \"invalid_file.log\" GDB log.", getExceptionMessage());
     m_expectedRegisters.R[MSP] = 0xDEADBEEF;
     m_expectedRegisters.R[PSP] = 0xDEADBEEF;
 }
@@ -69,6 +70,7 @@ TEST(GdbLogParser, OneLineLogFile_1RamValue_FailFSeekCall_ShouldThrow)
         __try_and_catch( GdbLogParse(m_pMem, &m_actualRegisters, "foo.log") );
     CHECK_EQUAL(fileException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("Failed to rewind GDB log for second pass.", getExceptionMessage());
 }
 
 TEST(GdbLogParser, EmptyLogfile_ShouldReturnNoRegions)
@@ -366,7 +368,7 @@ TEST(GdbLogParser, HaveAllRegistersAndTwoMemoryBanks_ShouldReturnTwoRegionsAndSe
                                        "xpsr           0xf00df00d",
                                        "msp            0x45454545",
                                        "psp            0x54545454"};
-                                       
+
 
     fgetsSetData(testLines, ARRAY_SIZE(testLines));
         GdbLogParse(m_pMem, &m_actualRegisters, "foo.log");

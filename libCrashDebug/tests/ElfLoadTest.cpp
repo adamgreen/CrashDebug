@@ -1,4 +1,4 @@
-/*  Copyright (C) 2018  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -91,6 +91,7 @@ TEST(ElfLoad, ElfSmallerThanHeaderByOneByte_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testHeader, sizeof(testHeader)-1) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF was too short to contain valid header.", getExceptionMessage());
 }
 
 TEST(ElfLoad, FirstByteOfElfIdentWrong_ShouldThrow)
@@ -101,6 +102,7 @@ TEST(ElfLoad, FirstByteOfElfIdentWrong_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF header doesn't start with expected magic ELF identifier.", getExceptionMessage());
 }
 
 TEST(ElfLoad, LastByteOfElfIdentWrong_ShouldThrow)
@@ -111,6 +113,7 @@ TEST(ElfLoad, LastByteOfElfIdentWrong_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF header doesn't start with expected magic ELF identifier.", getExceptionMessage());
 }
 
 TEST(ElfLoad, ElfHeaderClassTypeNot32Bit_ShouldThrow)
@@ -121,6 +124,7 @@ TEST(ElfLoad, ElfHeaderClassTypeNot32Bit_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF header doesn't contain 32-bit flag.", getExceptionMessage());
 }
 
 TEST(ElfLoad, ElfHeaderDataTypeNotLSB_ShouldThrow)
@@ -131,6 +135,7 @@ TEST(ElfLoad, ElfHeaderDataTypeNotLSB_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF header doesn't contain little endian flag.", getExceptionMessage());
 }
 
 TEST(ElfLoad, ElfHeaderNotExecutableType_ShouldThrow)
@@ -141,6 +146,7 @@ TEST(ElfLoad, ElfHeaderNotExecutableType_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF header doesn't contain executable flag.", getExceptionMessage());
 }
 
 TEST(ElfLoad, ElfHeaderWithPageHeaderOffsetOfZero_ShouldThrow)
@@ -151,6 +157,7 @@ TEST(ElfLoad, ElfHeaderWithPageHeaderOffsetOfZero_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF header contains an invalid offset of 0 for the page headers.", getExceptionMessage());
 }
 
 TEST(ElfLoad, ElfHeaderWithPageHeaderEntryCountOfZero_ShouldThrow)
@@ -161,6 +168,7 @@ TEST(ElfLoad, ElfHeaderWithPageHeaderEntryCountOfZero_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF header contains an invalid page header entry count of 0.", getExceptionMessage());
 }
 
 TEST(ElfLoad, ElfHeaderWithPageHeaderSizeSmallerThanExpected_ShouldThrow)
@@ -171,6 +179,8 @@ TEST(ElfLoad, ElfHeaderWithPageHeaderSizeSmallerThanExpected_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF header contains a page header entry size of 31, which is smaller than the expected size of 32.",
+                 getExceptionMessage());
 }
 
 TEST(ElfLoad, FirstPageHeaderEntryStartsOutOfBounds_ShouldThrow)
@@ -180,6 +190,7 @@ TEST(ElfLoad, FirstPageHeaderEntryStartsOutOfBounds_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testHeader, sizeof(testHeader)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF page header entry 0 is at an invalid file offset of 52.", getExceptionMessage());
 }
 
 TEST(ElfLoad, FirstPageHeaderEntryEndsOutOfBounds_ShouldThrow)
@@ -189,6 +200,7 @@ TEST(ElfLoad, FirstPageHeaderEntryEndsOutOfBounds_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(Elf32_Ehdr) + sizeof(Elf32_Phdr) - 1) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF page header entry 0 is at an invalid file offset of 52.", getExceptionMessage());
 }
 
 TEST(ElfLoad, NoPageEntryIsLoadable_ShouldThrow)
@@ -199,6 +211,8 @@ TEST(ElfLoad, NoPageEntryIsLoadable_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF contained no entries which were loadable and had a valid non-zero filesz <= to memsz.",
+                 getExceptionMessage());
 }
 
 TEST(ElfLoad, NoPageEntryHasNonZeroFileSize_ShouldThrow)
@@ -209,6 +223,8 @@ TEST(ElfLoad, NoPageEntryHasNonZeroFileSize_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF contained no entries which were loadable and had a valid non-zero filesz <= to memsz.",
+                 getExceptionMessage());
 }
 
 TEST(ElfLoad, NoPageEntryHasMemSizeGreaterThanOrEqualToFileSize_ShouldThrow)
@@ -219,6 +235,8 @@ TEST(ElfLoad, NoPageEntryHasMemSizeGreaterThanOrEqualToFileSize_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF contained no entries which were loadable and had a valid non-zero filesz <= to memsz.",
+                 getExceptionMessage());
 }
 
 TEST(ElfLoad, PageEntryOffsetIsOverflows_ShouldThrow)
@@ -229,6 +247,7 @@ TEST(ElfLoad, PageEntryOffsetIsOverflows_ShouldThrow)
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF failed to load entry from file at offsets 92 to 99.", getExceptionMessage());
 }
 
 TEST(ElfLoad, PageEntryFileSizeOverflows_ShouldThrow)
@@ -236,9 +255,11 @@ TEST(ElfLoad, PageEntryFileSizeOverflows_ShouldThrow)
     ElfFile1 testElf;
     initElfFile(&testElf);
     testElf.pgmHeader.p_filesz += 1;
+    testElf.pgmHeader.p_memsz += 1;
         __try_and_catch( ElfLoad_FromMemory(m_pMemory, &testElf, sizeof(testElf)) );
     CHECK_EQUAL(elfFormatException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("ELF failed to load entry from file at offsets 84 to 92.", getExceptionMessage());
 }
 
 TEST(ElfLoad, LoadFromFirstAndOnlyProgramHeaderEntry_ValidateMemoryContents)
@@ -293,6 +314,7 @@ TEST(ElfLoad, FileSizeSmallerThanMemSize_ValidateMemoryContents_ShouldTruncateTo
     __try_and_catch( IMemory_Read32(m_pMemory, 4) );
     CHECK_EQUAL(busErrorException, getExceptionCode());
     clearExceptionCode();
+    STRCMP_EQUAL("", getExceptionMessage());
 }
 
 TEST(ElfLoad, LoadFromSecondProgramHeaderEntry_ValidateMemoryContents)

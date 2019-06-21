@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -15,6 +15,7 @@
 #define _TRY_CATCH_H_
 
 #include <setjmp.h>
+#include <stdio.h>
 #define MRI_SKIP_TRY_CATCH_MACRO_DEFINES
 #include "../mri/include/try_catch.h"
 
@@ -50,6 +51,7 @@ typedef struct ExceptionHandler
 
 
 extern ExceptionHandler* g_pExceptionHandlers;
+extern char              g_exceptionMessage[1024];
 extern int               g_exceptionCode;
 
 
@@ -68,6 +70,7 @@ extern int               g_exceptionCode;
             exceptionHandler.pJumpBuffer = &jumpBuffer; \
             g_pExceptionHandlers = &exceptionHandler; \
             clearExceptionCode(); \
+            g_exceptionMessage[0] = '\0'; \
             \
             if (0 == setjmp(jumpBuffer)) \
             { \
@@ -93,6 +96,12 @@ extern int               g_exceptionCode;
             } \
         } while(0)
 
+#define __throw_msg(EXCEPTION, ...) \
+        do { \
+            snprintf(g_exceptionMessage, sizeof(g_exceptionMessage), __VA_ARGS__); \
+            __throw(EXCEPTION); \
+        } while(0)
+
 #define __rethrow __throw(getExceptionCode())
 
 #define __nothrow { clearExceptionCode(); return; }
@@ -105,6 +114,11 @@ extern int               g_exceptionCode;
 static inline int getExceptionCode(void)
 {
     return g_exceptionCode;
+}
+
+static inline const char* getExceptionMessage(void)
+{
+    return g_exceptionMessage;
 }
 
 static inline void setExceptionCode(int exceptionCode)
