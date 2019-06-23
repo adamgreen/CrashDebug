@@ -1,4 +1,4 @@
-/*  Copyright (C) 2017  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -137,7 +137,7 @@ static const char     g_binCrashDumpV3[] = "\x63\x43\x03\x00"
 
 TEST_GROUP(CrashDebugCommandLine)
 {
-    const char*           m_argv[10];
+    const char*           m_argv[16];
     CrashDebugCommandLine m_commandLine;
     int                   m_argc;
     RegisterContext       m_expectedRegisters;
@@ -887,4 +887,103 @@ TEST(CrashDebugCommandLine, ValidElfAndVersion3DumpFilenames_DifferentBaseAddres
     m_expectedRegisters.R[XPSR] = 0xF00DF00D;
     m_expectedRegisters.R[MSP] = 0xA5A5A5A5;
     m_expectedRegisters.R[PSP] = 0xBCBCBCBC;
+}
+
+TEST(CrashDebugCommandLine, LeaveOffBaseAddressSizeRedirectAddress_ShouldThrow)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x0");
+    addArg("--dump");
+    addArg(g_dumpFilenameV3);
+    addArg("--alias");
+    createTestFiles();
+        __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
+    validateExceptionThrownAndUsageStringDisplayed();
+    CHECK(m_commandLine.pMemory == NULL);
+}
+
+TEST(CrashDebugCommandLine, LeaveOffSizeRedirectAddress_ShouldThrow)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x0");
+    addArg("--dump");
+    addArg(g_dumpFilenameV3);
+    addArg("--alias");
+    addArg("0xA0000000");
+    createTestFiles();
+        __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
+    validateExceptionThrownAndUsageStringDisplayed();
+    CHECK(m_commandLine.pMemory == NULL);
+}
+
+TEST(CrashDebugCommandLine, LeaveOffRedirectAddress_ShouldThrow)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x0");
+    addArg("--dump");
+    addArg(g_dumpFilenameV3);
+    addArg("--alias");
+    addArg("0xA0000000");
+    addArg("8");
+    createTestFiles();
+        __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
+    validateExceptionThrownAndUsageStringDisplayed();
+    CHECK(m_commandLine.pMemory == NULL);
+}
+
+TEST(CrashDebugCommandLine, UsingAliasesWithLargeSizesToBeTruncated_ValidateMemoryAndRegisters)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x0");
+    addArg("--dump");
+    addArg(g_dumpFilenameV3);
+    addArg("--alias");
+    addArg("0xA0000000");
+    addArg("128");
+    addArg("0x0");
+    addArg("--alias");
+    addArg("0xB0000000");
+    addArg("128");
+    addArg("0x10000000");
+    createTestFiles();
+        CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv);
+    // Use aliases for FLASH.
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0xA0000000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0xA0000004));
+    // Use original addresses for FLASH.
+    CHECK_EQUAL(g_imageData[0], IMemory_Read32(m_commandLine.pMemory, 0x00000000));
+    CHECK_EQUAL(g_imageData[1], IMemory_Read32(m_commandLine.pMemory, 0x00000004));
+    // Use alias addresses for RAM.
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0xB0000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0xB0000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0xB0000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0xB000000c));
+    // Use original addresses for RAM.
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_commandLine.pMemory, 0x10000000));
+    CHECK_EQUAL(0x22222222, IMemory_Read32(m_commandLine.pMemory, 0x10000004));
+    CHECK_EQUAL(0x33333333, IMemory_Read32(m_commandLine.pMemory, 0x10000008));
+    CHECK_EQUAL(0x44444444, IMemory_Read32(m_commandLine.pMemory, 0x1000000c));
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0xa5a5a5a5;
+    m_expectedRegisters.R[PSP] = 0xbcbcbcbc;
 }

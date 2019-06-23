@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -1011,4 +1011,187 @@ TEST(MemorySim, GetReadCount_CheckFlashRegionWithMultipleHalfWordOnlyReadFromOne
     CHECK_EQUAL(0, MemorySim_GetFlashReadCount(m_pMemory, testAddress));
     CHECK_EQUAL(1, MemorySim_GetFlashReadCount(m_pMemory, testAddress + 2));
     CHECK_EQUAL(0, MemorySim_GetFlashReadCount(m_pMemory, testAddress + 4));
+}
+
+
+TEST(MemorySim, AliasToSimulateFourBytes_DefaultsToReadWrite_VerifyCanReadAndWrite)
+{
+    static const uint32_t testAddress = 0x00000004;
+    static const uint32_t aliasAddress = 0x10000004;
+    MemorySim_CreateRegion(m_pMemory, testAddress, 4);
+    MemorySim_CreateAlias(m_pMemory, aliasAddress, testAddress, 4);
+
+    // Verify that the base address still works as expected.
+    IMemory_Write32(m_pMemory, testAddress, 0x11111111);
+    CHECK_EQUAL(0x11111111, IMemory_Read32(m_pMemory, testAddress));
+    IMemory_Write16(m_pMemory, testAddress, 0x2222);
+    CHECK_EQUAL(0x2222, IMemory_Read16(m_pMemory, testAddress));
+    IMemory_Write8(m_pMemory, testAddress, 0x33);
+    CHECK_EQUAL(0x33, IMemory_Read8(m_pMemory, testAddress));
+
+    // Now try the alias and redirects.
+    IMemory_Write32(m_pMemory, aliasAddress, 0xAAAAAAAA);
+    CHECK_EQUAL(0xAAAAAAAA, IMemory_Read32(m_pMemory, aliasAddress));
+    CHECK_EQUAL(0xAAAAAAAA, IMemory_Read32(m_pMemory, testAddress));
+    IMemory_Write16(m_pMemory, aliasAddress, 0xBBBB);
+    CHECK_EQUAL(0xBBBB, IMemory_Read16(m_pMemory, aliasAddress));
+    CHECK_EQUAL(0xBBBB, IMemory_Read16(m_pMemory, testAddress));
+    IMemory_Write8(m_pMemory, aliasAddress, 0xCC);
+    CHECK_EQUAL(0xCC, IMemory_Read8(m_pMemory, aliasAddress));
+    CHECK_EQUAL(0xCC, IMemory_Read8(m_pMemory, testAddress));
+
+    IMemory_Write32(m_pMemory, testAddress, 0xAAAAAAAA);
+    CHECK_EQUAL(0xAAAAAAAA, IMemory_Read32(m_pMemory, aliasAddress));
+    CHECK_EQUAL(0xAAAAAAAA, IMemory_Read32(m_pMemory, testAddress));
+    IMemory_Write16(m_pMemory, testAddress, 0xBBBB);
+    CHECK_EQUAL(0xBBBB, IMemory_Read16(m_pMemory, aliasAddress));
+    CHECK_EQUAL(0xBBBB, IMemory_Read16(m_pMemory, testAddress));
+    IMemory_Write8(m_pMemory, testAddress, 0xCC);
+    CHECK_EQUAL(0xCC, IMemory_Read8(m_pMemory, aliasAddress));
+    CHECK_EQUAL(0xCC, IMemory_Read8(m_pMemory, testAddress));
+}
+
+TEST(MemorySim, AliasToSimulateFourBytes_VerifyCanMakeReadOnly)
+{
+    static const uint32_t testAddress = 0x00000004;
+    static const uint32_t aliasAddress = 0x10000004;
+    MemorySim_CreateRegion(m_pMemory, testAddress, 4);
+    MemorySim_MakeRegionReadOnly(m_pMemory, testAddress);
+    MemorySim_CreateAlias(m_pMemory, aliasAddress, testAddress, 4);
+
+    __try_and_catch( IMemory_Write32(m_pMemory, aliasAddress, 0x11111111) );
+    validateExceptionThrown(busErrorException);
+    __try_and_catch( IMemory_Write16(m_pMemory, aliasAddress, 0x2222) );
+    validateExceptionThrown(busErrorException);
+    __try_and_catch( IMemory_Write8(m_pMemory, aliasAddress, 0x33) );
+    validateExceptionThrown(busErrorException);
+
+    CHECK_EQUAL(0x00000000, IMemory_Read32(m_pMemory, aliasAddress));
+    CHECK_EQUAL(0x0000, IMemory_Read16(m_pMemory, aliasAddress));
+    CHECK_EQUAL(0x00, IMemory_Read8(m_pMemory, aliasAddress));
+}
+
+TEST(MemorySim, AliasToSetAndClear2ByteHardwareBreakpoint_IssueReadsWhichHitAndMissBreakpoint)
+{
+    static const uint32_t testBase = 0x00000000;
+    static const uint32_t aliasAddress = 0x10000004;
+    MemorySim_CreateRegion(m_pMemory, testBase, 3 * sizeof(uint16_t));
+    MemorySim_CreateAlias(m_pMemory, aliasAddress, testBase, 3 * sizeof(uint16_t));
+
+    MemorySim_SetHardwareBreakpoint(m_pMemory, aliasAddress + 1 * sizeof(uint16_t), sizeof(uint16_t));
+    CHECK_EQUAL(0x0000, IMemory_Read16(m_pMemory, aliasAddress + 0 * sizeof(uint16_t)));
+        __try_and_catch( IMemory_Read16(m_pMemory, aliasAddress + 1 * sizeof(uint16_t)) );
+        validateExceptionThrown(hardwareBreakpointException);
+    CHECK_EQUAL(0x0000, IMemory_Read16(m_pMemory, aliasAddress + 2 * sizeof(uint16_t)));
+    CHECK_EQUAL(0x0000, IMemory_Read16(m_pMemory, testBase + 0 * sizeof(uint16_t)));
+        __try_and_catch( IMemory_Read16(m_pMemory, testBase + 1 * sizeof(uint16_t)) );
+        validateExceptionThrown(hardwareBreakpointException);
+    CHECK_EQUAL(0x0000, IMemory_Read16(m_pMemory, testBase + 2 * sizeof(uint16_t)));
+    MemorySim_ClearHardwareBreakpoint(m_pMemory, aliasAddress + 1 * sizeof(uint16_t), sizeof(uint16_t));
+    CHECK_EQUAL(0x0000, IMemory_Read16(m_pMemory, aliasAddress + 1 * sizeof(uint16_t)));
+
+    MemorySim_SetHardwareBreakpoint(m_pMemory, testBase + 1 * sizeof(uint16_t), sizeof(uint16_t));
+    CHECK_EQUAL(0x0000, IMemory_Read16(m_pMemory, aliasAddress + 0 * sizeof(uint16_t)));
+        __try_and_catch( IMemory_Read16(m_pMemory, aliasAddress + 1 * sizeof(uint16_t)) );
+        validateExceptionThrown(hardwareBreakpointException);
+    CHECK_EQUAL(0x0000, IMemory_Read16(m_pMemory, aliasAddress + 2 * sizeof(uint16_t)));
+    MemorySim_ClearHardwareBreakpoint(m_pMemory, testBase + 1 * sizeof(uint16_t), sizeof(uint16_t));
+    CHECK_EQUAL(0x0000, IMemory_Read16(m_pMemory, aliasAddress + 1 * sizeof(uint16_t)));
+}
+
+TEST(MemorySim, AliasToSetAndClear4ByteHardwareWatchpoint_IssueReadsWhichHitAndMissBreakpoint)
+{
+    uint32_t testBase = 0x00000000;
+    static const uint32_t aliasAddress = 0x10000004;
+    MemorySim_CreateRegion(m_pMemory, testBase, 3 * sizeof(uint32_t));
+    MemorySim_CreateAlias(m_pMemory, aliasAddress, testBase, 3 * sizeof(uint32_t));
+
+    MemorySim_SetHardwareWatchpoint(m_pMemory, testBase + 1 * sizeof(uint32_t), sizeof(uint32_t), WATCHPOINT_READ);
+    CHECK_EQUAL(0x00000000, IMemory_Read32(m_pMemory, aliasAddress + 0 * sizeof(uint32_t)));
+        CHECK_FALSE(MemorySim_WasWatchpointEncountered(m_pMemory));
+        CHECK_EQUAL(0x0000000, IMemory_Read32(m_pMemory, aliasAddress + 1 * sizeof(uint32_t)));
+        CHECK_TRUE(MemorySim_WasWatchpointEncountered(m_pMemory));
+    CHECK_EQUAL(0x00000000, IMemory_Read32(m_pMemory, aliasAddress + 2 * sizeof(uint32_t)));
+    MemorySim_ClearHardwareWatchpoint(m_pMemory, testBase + 1 * sizeof(uint32_t), sizeof(uint32_t), WATCHPOINT_READ);
+    CHECK_EQUAL(0x00000000, IMemory_Read32(m_pMemory, aliasAddress + 1 * sizeof(uint32_t)));
+
+    MemorySim_SetHardwareWatchpoint(m_pMemory, aliasAddress + 1 * sizeof(uint32_t), sizeof(uint32_t), WATCHPOINT_READ);
+    CHECK_EQUAL(0x00000000, IMemory_Read32(m_pMemory, testBase + 0 * sizeof(uint32_t)));
+        CHECK_FALSE(MemorySim_WasWatchpointEncountered(m_pMemory));
+        CHECK_EQUAL(0x0000000, IMemory_Read32(m_pMemory, testBase + 1 * sizeof(uint32_t)));
+        CHECK_TRUE(MemorySim_WasWatchpointEncountered(m_pMemory));
+    CHECK_EQUAL(0x00000000, IMemory_Read32(m_pMemory, testBase + 2 * sizeof(uint32_t)));
+    MemorySim_ClearHardwareWatchpoint(m_pMemory, aliasAddress + 1 * sizeof(uint32_t), sizeof(uint32_t), WATCHPOINT_READ);
+    CHECK_EQUAL(0x00000000, IMemory_Read32(m_pMemory, testBase + 1 * sizeof(uint32_t)));
+}
+
+TEST(MemorySim, GetMemoryMapXML_OneFlashAndOneRamRegionPlusAliasesForEach)
+{
+    uint32_t flashBinary[2] = { 0x10008000, 0x00000200 };
+    MemorySim_CreateRegionsFromFlashImage(m_pMemory, flashBinary, sizeof(flashBinary));
+    MemorySim_CreateAlias(m_pMemory, 0xA0000000, 0x00000000, 8);
+    MemorySim_CreateAlias(m_pMemory, 0xB0000000, 0x10000000, 0x8000);
+    const char* pText = MemorySim_GetMemoryMapXML(m_pMemory);
+    CHECK(pText != NULL);
+    STRCMP_EQUAL(pText, "<?xml version=\"1.0\"?>"
+                        "<!DOCTYPE memory-map PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\" \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
+                        "<memory-map>"
+                        "<memory type=\"flash\" start=\"0x0\" length=\"0x8\"> <property name=\"blocksize\">1</property></memory>"
+                        "<memory type=\"ram\" start=\"0x10000000\" length=\"0x8000\"></memory>"
+                        "<memory type=\"flash\" start=\"0xA0000000\" length=\"0x8\"> <property name=\"blocksize\">1</property></memory>"
+                        "<memory type=\"ram\" start=\"0xB0000000\" length=\"0x8000\"></memory>"
+                        "</memory-map>");
+}
+
+TEST(MemorySim, GetMemoryMapXML_OneFlashAndOneRamRegionPlusAliasesForEach_MakeAliasesTooLarge_ShouldBeTruncated)
+{
+    uint32_t flashBinary[2] = { 0x10008000, 0x00000200 };
+    MemorySim_CreateRegionsFromFlashImage(m_pMemory, flashBinary, sizeof(flashBinary));
+    MemorySim_CreateAlias(m_pMemory, 0xA0000000, 0x00000000, 8*2);
+    MemorySim_CreateAlias(m_pMemory, 0xB0000000, 0x10000000, 0x8000*2);
+    const char* pText = MemorySim_GetMemoryMapXML(m_pMemory);
+    CHECK(pText != NULL);
+    STRCMP_EQUAL(pText, "<?xml version=\"1.0\"?>"
+                        "<!DOCTYPE memory-map PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\" \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
+                        "<memory-map>"
+                        "<memory type=\"flash\" start=\"0x0\" length=\"0x8\"> <property name=\"blocksize\">1</property></memory>"
+                        "<memory type=\"ram\" start=\"0x10000000\" length=\"0x8000\"></memory>"
+                        "<memory type=\"flash\" start=\"0xA0000000\" length=\"0x8\"> <property name=\"blocksize\">1</property></memory>"
+                        "<memory type=\"ram\" start=\"0xB0000000\" length=\"0x8000\"></memory>"
+                        "</memory-map>");
+}
+
+TEST(MemorySim, MapSimulatedAddressForWrite_MapValidAddressRegionAndAliases)
+{
+    static const uint32_t testAddress = 0x00000004;
+    static const uint32_t aliasAddress = 0x10000004;
+    MemorySim_CreateRegion(m_pMemory, testAddress, 4);
+    MemorySim_CreateAlias(m_pMemory, aliasAddress, testAddress, 4);
+    IMemory_Write32(m_pMemory, testAddress, 0x11111111);
+        void* pvHostAddress1 = MemorySim_MapSimulatedAddressToHostAddressForWrite(m_pMemory, testAddress, sizeof(uint32_t));
+    CHECK_EQUAL(0x11111111, *(uint32_t*)pvHostAddress1);
+        void* pvHostAddress2 = MemorySim_MapSimulatedAddressToHostAddressForWrite(m_pMemory, aliasAddress, sizeof(uint32_t));
+    CHECK_EQUAL(0x11111111, *(uint32_t*)pvHostAddress2);
+    CHECK_EQUAL(pvHostAddress1, pvHostAddress2);
+}
+
+TEST(MemorySim, GetReadCount_CheckFlashRegionWithOneAliasReads_ShouldReadCountOfOne)
+{
+    static const uint32_t testAddress = 0x00000000;
+    static const uint32_t aliasAddress = 0x10000004;
+    MemorySim_CreateRegion(m_pMemory, testAddress, 2);
+    MemorySim_MakeRegionReadOnly(m_pMemory, testAddress);
+    MemorySim_CreateAlias(m_pMemory, aliasAddress, testAddress, 2);
+    IMemory_Read16(m_pMemory, aliasAddress);
+        uint32_t readCount = MemorySim_GetFlashReadCount(m_pMemory, testAddress);
+    CHECK_EQUAL(1, readCount);
+}
+
+TEST(MemorySim, AttemptToAliasNonExistentRegion_ShouldThrow)
+{
+    static const uint32_t testAddress = 0x00000004;
+    static const uint32_t aliasAddress = 0x10000004;
+    MemorySim_CreateRegion(m_pMemory, testAddress, 4);
+    __try_and_catch( MemorySim_CreateAlias(m_pMemory, aliasAddress, testAddress + 4, 4) );
+    validateExceptionThrown(busErrorException);
 }

@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -58,7 +58,7 @@ typedef struct Watchpoint Watchpoint;
 static void freeRegion(MemoryRegion* pRegion);
 static void* throwingZeroedMalloc(size_t size);
 static void addRegionToTail(MemorySim* pThis, MemoryRegion* pRegion);
-static MemoryRegion* findMatchingRegion(MemorySim* pThis, uint32_t address, uint32_t size);
+static MemoryRegion* findMatchingRegion(MemorySim* pThis, uint32_t* pAddress, uint32_t size);
 static void allocateReadCountArrayForReadOnlyRegion(MemoryRegion* pRegion);
 static void load32(IMemory* pMemory, uint32_t address, uint32_t value);
 static void load8(IMemory* pMemory, uint32_t address, uint8_t value);
@@ -100,15 +100,18 @@ struct Watchpoint
 struct MemoryRegion
 {
     struct MemoryRegion* pNext;
+    struct MemoryRegion* pRedirect;
     uint8_t*             pData;
     Watchpoint*          pWatchpoints;
     uint32_t*            pReadCounts;
     uint32_t             baseAddress;
+    uint32_t             redirectAddress;
     uint32_t             size;
     uint32_t             watchpointCount;
     uint32_t             watchpointAlloc;
     uint32_t             readCounts;
-    int                  readOnly;
+    int                  isReadOnly;
+    int                  isAlias;
 };
 
 struct MemorySim
@@ -203,23 +206,61 @@ static void addRegionToTail(MemorySim* pThis, MemoryRegion* pRegion)
 }
 
 
+void MemorySim_CreateAlias(IMemory* pMemory, uint32_t aliasAddress, uint32_t redirectAddress, uint32_t size)
+{
+    MemorySim*             pThis = (MemorySim*)pMemory;
+    MemoryRegion* volatile pRegion = NULL;
+    MemoryRegion*          pRedirect = NULL;
+
+    __try
+    {
+        pRegion = throwingZeroedMalloc(sizeof(*pRegion));
+        pRegion->baseAddress = aliasAddress;
+        pRegion->redirectAddress = redirectAddress;
+        pRedirect = findMatchingRegion(pThis, &redirectAddress, 1);
+        uint32_t maxSize = pRedirect->size - (pRegion->redirectAddress - pRedirect->baseAddress);
+        if (size > maxSize)
+            size = maxSize;
+        pRegion->pRedirect = pRedirect;
+        pRegion->size = size;
+        pRegion->pData = throwingZeroedMalloc(size);
+        pRegion->isAlias = 1;
+        pRegion->isReadOnly = pRedirect->isReadOnly;
+        addRegionToTail(pThis, pRegion);
+    }
+    __catch
+    {
+        freeRegion(pRegion);
+        __rethrow;
+    }
+}
+
+
 void MemorySim_MakeRegionReadOnly(IMemory* pMemory, uint32_t baseAddress)
 {
     MemorySim* pThis = (MemorySim*)pMemory;
-    MemoryRegion* pRegion = findMatchingRegion(pThis, baseAddress, 1);
-    pRegion->readOnly = 1;
+    MemoryRegion* pRegion = findMatchingRegion(pThis, &baseAddress, 1);
+    pRegion->isReadOnly = 1;
     allocateReadCountArrayForReadOnlyRegion(pRegion);
 }
 
-static MemoryRegion* findMatchingRegion(MemorySim* pThis, uint32_t address, uint32_t size)
+static MemoryRegion* findMatchingRegion(MemorySim* pThis, uint32_t* pAddress, uint32_t size)
 {
+    uint32_t address = *pAddress;
     MemoryRegion* pCurr = pThis->pHeadRegion;
 
     while (pCurr)
     {
         MemoryRegion* pNext = pCurr->pNext;
         if (address >= pCurr->baseAddress && (uint64_t)address + size <= (uint64_t)pCurr->baseAddress + pCurr->size)
+        {
+            if (pCurr->isAlias)
+            {
+                *pAddress = (address - pCurr->baseAddress) + pCurr->redirectAddress;
+                return pCurr->pRedirect;
+            }
             return pCurr;
+        }
         pCurr = pNext;
     }
     __throw(busErrorException);
@@ -364,10 +405,10 @@ static void appendMemoryMapRegions(MemorySim* pThis, SizedBuffer* pBuffer)
     {
         bytesUsed = snprintf(pBuffer->pBuffer, pBuffer->size,
                              "<memory type=\"%s\" start=\"0x%X\" length=\"0x%X\">%s</memory>",
-                             pCurr->readOnly ? "flash" : "ram",
+                             pCurr->isReadOnly ? "flash" : "ram",
                              pCurr->baseAddress,
                              pCurr->size,
-                             pCurr->readOnly ? " <property name=\"blocksize\">1</property>" : "");
+                             pCurr->isReadOnly ? " <property name=\"blocksize\">1</property>" : "");
         assert (bytesUsed < (int)pBuffer->size);
         pBuffer->pBuffer += bytesUsed;
         pBuffer->size -= bytesUsed;
@@ -400,10 +441,10 @@ __throws const void* MemorySim_MapSimulatedAddressToHostAddressForRead(IMemory* 
 __throws uint32_t MemorySim_GetFlashReadCount(IMemory* pMemory, uint32_t address)
 {
     MemorySim*    pThis = (MemorySim*)pMemory;
-    MemoryRegion* pRegion = findMatchingRegion(pThis, address, 2);
+    MemoryRegion* pRegion = findMatchingRegion(pThis, &address, 2);
     uint32_t      regionOffset = address - pRegion->baseAddress;
 
-    if (!pRegion->readOnly)
+    if (!pRegion->isReadOnly)
         __throw(busErrorException);
     return pRegion->pReadCounts[regionOffset / sizeof(uint16_t)];
 }
@@ -416,7 +457,7 @@ __throws void MemorySim_SetHardwareBreakpoint(IMemory* pMemory, uint32_t address
 
 static void setWatchpoint(IMemory* pMemory, uint32_t address, uint32_t size, WatchpointType type)
 {
-    MemoryRegion* pRegion = findMatchingRegion((MemorySim*)pMemory, address, size);
+    MemoryRegion* pRegion = findMatchingRegion((MemorySim*)pMemory, &address, size);
     uint32_t      endAddress = address + size;
     Watchpoint    watchpoint = {type, address, endAddress};
     uint32_t      i;
@@ -493,7 +534,7 @@ __throws void MemorySim_ClearHardwareBreakpoint(IMemory* pMemory, uint32_t addre
 
 static void clearWatchpoint(IMemory* pMemory, uint32_t address, uint32_t size, WatchpointType type)
 {
-    MemoryRegion* pRegion = findMatchingRegion((MemorySim*)pMemory, address, size);
+    MemoryRegion* pRegion = findMatchingRegion((MemorySim*)pMemory, &address, size);
     uint32_t      endAddress = address + size;
     Watchpoint    watchpoint = {type, address, endAddress};
     uint32_t      i;
@@ -565,9 +606,9 @@ static void write8(IMemory* pMemory, uint32_t address, uint8_t value)
 
 static void* getDataPointer(MemorySim* pThis, uint32_t address, uint32_t size, AccessType type, int checkWatchpoints)
 {
-    MemoryRegion* pRegion = findMatchingRegion(pThis, address, size);
+    MemoryRegion* pRegion = findMatchingRegion(pThis, &address, size);
     uint32_t regionOffset = address - pRegion->baseAddress;
-    if (type == WRITING && pRegion->readOnly)
+    if (type == WRITING && pRegion->isReadOnly)
         __throw(busErrorException);
     if (type == READING && size == sizeof(uint16_t) && pRegion->pReadCounts)
         pRegion->pReadCounts[regionOffset / sizeof(uint16_t)]++;

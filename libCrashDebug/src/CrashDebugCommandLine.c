@@ -1,4 +1,4 @@
-/*  Copyright (C) 2014  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -36,6 +36,7 @@ static void displayUsage(void)
 {
     printf("Usage: CrashDebug (--elf elfFilename | --bin imageFilename baseAddress)\n"
            "                   --dump dumpFilename\n"
+           "                  [--alias baseAddress size redirectAddress]\n"
            "Where: NOTE: The --elf and --bin options are mutually exclusive.  Use one\n"
            "             or the other but not both.\n"
            "       --elf is used to provide the filename of the .elf image containing\n"
@@ -51,7 +52,11 @@ static void displayUsage(void)
            "         contains the contents of RAM and the CPU registers at the time of\n"
            "         the crash.  See the following link to learn more about generating\n"
            "         these crash dumps:\n"
-           "           http://github.com/adamgreen/CrashDebug#crash-dump-generation\n");
+           "           http://github.com/adamgreen/CrashDebug#crash-dump-generation\n"
+           "       --alias is used to trap memory accesses to the region defined\n"
+           "         by baseAddress/size and redirect them to the region at\n"
+           "         redirectAddress. For example acesses to baseAddress will access\n"
+           "         redirectAddress instead).\n");
 }
 
 
@@ -68,13 +73,21 @@ typedef enum
     CRASH_CATCHER_HEX,
 } DumpFileType;
 
+typedef enum
+{
+    FIRST_PASS,
+    SECOND_PASS
+} ParsePass;
 
-static int parseArgument(CrashDebugCommandLine* pThis, int index, int argc, const char** ppArgs);
+
+static void parseArguments(CrashDebugCommandLine* pThis, int volatile argc, const char** volatile argv, ParsePass pass);
+static int parseArgument(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass);
 static int hasDoubleDashPrefix(const char* pArgument);
-static int parseFlagArgument(CrashDebugCommandLine* pThis, int argc, const char** ppArgs);
-static int parseBinFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs);
-static int parseElfFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs);
-static int parseDumpFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs);
+static int parseFlagArgument(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass);
+static int parseBinFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass);
+static int parseElfFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass);
+static int parseDumpFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass);
+static int parseAliasOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass);
 static void throwIfRequiredArgumentNotSpecified(CrashDebugCommandLine* pThis);
 static void loadImageFile(CrashDebugCommandLine* pThis);
 static FileData loadFileData(const char* pFilename);
@@ -92,20 +105,13 @@ __throws void CrashDebugCommandLine_Init(CrashDebugCommandLine* pThis, int volat
 {
     __try
     {
-        int index = 0;
-
         memset(pThis, 0, sizeof(*pThis));
-        while (argc)
-        {
-            int argumentsUsed = parseArgument(pThis, index, argc, argv);
-            argc -= argumentsUsed;
-            argv += argumentsUsed;
-            index += argumentsUsed;
-        }
+        parseArguments(pThis, argc, argv, FIRST_PASS);
         throwIfRequiredArgumentNotSpecified(pThis);
         pThis->pMemory = MemorySim_Init();
         loadImageFile(pThis);
         loadDumpFile(pThis);
+        parseArguments(pThis, argc, argv, SECOND_PASS);
     }
     __catch
     {
@@ -117,10 +123,20 @@ __throws void CrashDebugCommandLine_Init(CrashDebugCommandLine* pThis, int volat
     }
 }
 
-static int parseArgument(CrashDebugCommandLine* pThis, int index, int argc, const char** ppArgs)
+static void parseArguments(CrashDebugCommandLine* pThis, int volatile argc, const char** volatile argv, ParsePass pass)
+{
+    while (argc)
+    {
+        int argumentsUsed = parseArgument(pThis, argc, argv, pass);
+        argc -= argumentsUsed;
+        argv += argumentsUsed;
+    }
+}
+
+static int parseArgument(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
 {
     if (hasDoubleDashPrefix(*ppArgs))
-        return parseFlagArgument(pThis, argc, ppArgs);
+        return parseFlagArgument(pThis, argc, ppArgs, pass);
     else
         __throw(invalidArgumentException);
 }
@@ -130,44 +146,66 @@ static int hasDoubleDashPrefix(const char* pArgument)
     return pArgument[0] == '-' && pArgument[1] == '-';
 }
 
-static int parseFlagArgument(CrashDebugCommandLine* pThis, int argc, const char** ppArgs)
+static int parseFlagArgument(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
 {
     if (0 == strcasecmp(*ppArgs, "--bin"))
-        return parseBinFilenameOption(pThis, argc - 1, &ppArgs[1]);
+        return parseBinFilenameOption(pThis, argc - 1, &ppArgs[1], pass);
     else if (0 == strcasecmp(*ppArgs, "--elf"))
-        return parseElfFilenameOption(pThis, argc - 1, &ppArgs[1]);
+        return parseElfFilenameOption(pThis, argc - 1, &ppArgs[1], pass);
     else if (0 == strcasecmp(*ppArgs, "--dump"))
-        return parseDumpFilenameOption(pThis, argc - 1, &ppArgs[1]);
+        return parseDumpFilenameOption(pThis, argc - 1, &ppArgs[1], pass);
+    else if (0 == strcasecmp(*ppArgs, "--alias"))
+        return parseAliasOption(pThis, argc - 1, &ppArgs[1], pass);
     else
         __throw(invalidArgumentException);
 }
 
-static int parseBinFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs)
+static int parseBinFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
 {
     if (argc < 2)
         __throw(invalidArgumentException);
 
-    pThis->pBinFilename = ppArgs[0];
-    pThis->baseAddress = strtoul(ppArgs[1], NULL, 0);
+    if (pass == FIRST_PASS)
+    {
+        pThis->pBinFilename = ppArgs[0];
+        pThis->baseAddress = strtoul(ppArgs[1], NULL, 0);
+    }
     return 3;
 }
 
-static int parseElfFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs)
+static int parseElfFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
 {
     if (argc < 1)
         __throw(invalidArgumentException);
 
-    pThis->pElfFilename = ppArgs[0];
+    if (pass == FIRST_PASS)
+        pThis->pElfFilename = ppArgs[0];
     return 2;
 }
 
-static int parseDumpFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs)
+static int parseDumpFilenameOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
 {
     if (argc < 1)
         __throw(invalidArgumentException);
 
-    pThis->pDumpFilename = ppArgs[0];
+    if (pass == FIRST_PASS)
+        pThis->pDumpFilename = ppArgs[0];
     return 2;
+}
+
+static int parseAliasOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
+{
+    if (argc < 3)
+        __throw(invalidArgumentException);
+
+    if (pass == SECOND_PASS)
+    {
+        uint32_t baseAddress = strtoul(ppArgs[0], NULL, 0);
+        uint32_t size = strtoul(ppArgs[1], NULL, 0);
+        uint32_t redirectAddress = strtoul(ppArgs[2], NULL, 0);
+        MemorySim_CreateAlias(pThis->pMemory, baseAddress, redirectAddress, size);
+    }
+    return 4;
 }
 
 static void throwIfRequiredArgumentNotSpecified(CrashDebugCommandLine* pThis)
