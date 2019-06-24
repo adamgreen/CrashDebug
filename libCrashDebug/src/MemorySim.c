@@ -220,9 +220,10 @@ void MemorySim_CreateAlias(IMemory* pMemory, uint32_t aliasAddress, uint32_t red
         pRedirect = findMatchingRegion(pThis, &redirectAddress, 1);
         uint32_t maxSize = pRedirect->size - (pRegion->redirectAddress - pRedirect->baseAddress);
         if (size > maxSize)
-            size = maxSize;
+            pRegion->size = maxSize;
+        else
+            pRegion->size = size;
         pRegion->pRedirect = pRedirect;
-        pRegion->size = size;
         pRegion->pData = throwingZeroedMalloc(size);
         pRegion->isAlias = 1;
         pRegion->isReadOnly = pRedirect->isReadOnly;
