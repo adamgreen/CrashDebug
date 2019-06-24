@@ -198,14 +198,23 @@ static int parseDumpFilenameOption(CrashDebugCommandLine* pThis, int argc, const
 static int parseAliasOption(CrashDebugCommandLine* pThis, int argc, const char** ppArgs, ParsePass pass)
 {
     if (argc < 3)
-        __throw(invalidArgumentException);
+        __throw_msg(invalidArgumentException, "The --alias command line option requires baseAddress, size, and redirectAddress.");
 
     if (pass == SECOND_PASS)
     {
         uint32_t baseAddress = strtoul(ppArgs[0], NULL, 0);
         uint32_t size = strtoul(ppArgs[1], NULL, 0);
         uint32_t redirectAddress = strtoul(ppArgs[2], NULL, 0);
-        MemorySim_CreateAlias(pThis->pMemory, baseAddress, redirectAddress, size);
+        __try
+        {
+            MemorySim_CreateAlias(pThis->pMemory, baseAddress, redirectAddress, size);
+        }
+        __catch
+        {
+            __throw_msg(getExceptionCode(),
+                        "Failed to create alias of 0x%08X to 0x%08X of size %d.",
+                        baseAddress, redirectAddress, size);
+        }
     }
     return 4;
 }

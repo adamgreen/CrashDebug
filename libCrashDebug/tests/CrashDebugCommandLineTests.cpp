@@ -901,7 +901,7 @@ TEST(CrashDebugCommandLine, LeaveOffBaseAddressSizeRedirectAddress_ShouldThrow)
     addArg("--alias");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "The --alias command line option requires baseAddress, size, and redirectAddress.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -916,7 +916,7 @@ TEST(CrashDebugCommandLine, LeaveOffSizeRedirectAddress_ShouldThrow)
     addArg("0xA0000000");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "The --alias command line option requires baseAddress, size, and redirectAddress.");
     CHECK(m_commandLine.pMemory == NULL);
 }
 
@@ -932,8 +932,44 @@ TEST(CrashDebugCommandLine, LeaveOffRedirectAddress_ShouldThrow)
     addArg("8");
     createTestFiles();
         __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
-    validateExceptionThrownAndUsageStringDisplayed();
+    validateExceptionThrownAndUsageStringDisplayed(invalidArgumentException, "The --alias command line option requires baseAddress, size, and redirectAddress.");
     CHECK(m_commandLine.pMemory == NULL);
+}
+
+TEST(CrashDebugCommandLine, AttemptToAliasToUnknownRegion_ShouldThrow)
+{
+    addArg("--bin");
+    addArg(g_imageFilename);
+    addArg("0x0");
+    addArg("--dump");
+    addArg(g_dumpFilenameV3);
+    addArg("--alias");
+    addArg("0xA0000000");
+    addArg("128");
+    addArg("0xBAADBEEF");
+    createTestFiles();
+        __try_and_catch( CrashDebugCommandLine_Init(&m_commandLine, m_argc, m_argv) );
+    validateExceptionThrownAndUsageStringDisplayed(busErrorException, "Failed to create alias of 0xA0000000 to 0xBAADBEEF of size 128.");
+    CHECK(m_commandLine.pMemory == NULL);
+    m_expectedRegisters.R[R0]  = 0x5a5a5a5a;
+    m_expectedRegisters.R[R1]  = 0x11111111;
+    m_expectedRegisters.R[R2]  = 0x22222222;
+    m_expectedRegisters.R[R3]  = 0x33333333;
+    m_expectedRegisters.R[R4]  = 0x44444444;
+    m_expectedRegisters.R[R5]  = 0x55555555;
+    m_expectedRegisters.R[R6]  = 0x66666666;
+    m_expectedRegisters.R[R7]  = 0x77777777;
+    m_expectedRegisters.R[R8]  = 0x88888888;
+    m_expectedRegisters.R[R9]  = 0x99999999;
+    m_expectedRegisters.R[R10] = 0xAAAAAAAA;
+    m_expectedRegisters.R[R11] = 0xBBBBBBBB;
+    m_expectedRegisters.R[R12] = 0xCCCCCCCC;
+    m_expectedRegisters.R[SP]  = 0xDDDDDDDD;
+    m_expectedRegisters.R[LR]  = 0xEEEEEEEE;
+    m_expectedRegisters.R[PC]  = 0xFFFFFFFF;
+    m_expectedRegisters.R[XPSR] = 0xF00DF00D;
+    m_expectedRegisters.R[MSP] = 0xa5a5a5a5;
+    m_expectedRegisters.R[PSP] = 0xbcbcbcbc;
 }
 
 TEST(CrashDebugCommandLine, UsingAliasesWithLargeSizesToBeTruncated_ValidateMemoryAndRegisters)
