@@ -93,14 +93,14 @@ static void validateElfHeaderContents(const Elf32_Ehdr* pHeader)
         __throw_msg(elfFormatException, "ELF header contains an invalid page header entry count of 0.");
     if (pHeader->e_phentsize < sizeof(Elf32_Phdr))
         __throw_msg(elfFormatException,
-                    "ELF header contains a page header entry size of %d, which is smaller than the expected size of %lu.",
-                    pHeader->e_phentsize, sizeof(Elf32_Phdr));
+                    "ELF header contains a page header entry size of %d, which is smaller than the expected size of %u.",
+                    pHeader->e_phentsize, (unsigned int)sizeof(Elf32_Phdr));
 }
 
 static void loadFlashLoadableEntries(IMemory* pMemory, LoadObject* pObject)
 {
-    const Elf32_Phdr*   pPgmHeader = NULL;
-    Elf32_Half          i = 0;
+    const Elf32_Phdr* volatile  pPgmHeader = NULL;
+    volatile Elf32_Half         i = 0;
 
     for (i = 0, pObject->pgmHeaderOffset = pObject->pElfHeader->e_phoff ; i < pObject->pElfHeader->e_phnum ; i++)
     {
@@ -121,7 +121,7 @@ static void loadFlashLoadableEntries(IMemory* pMemory, LoadObject* pObject)
 
 static void loadIfFlashLoadableEntry(IMemory* pMemory, LoadObject* pObject, const Elf32_Phdr* pPgmHeader)
 {
-    const void* pData = NULL;
+    const void* volatile pData = NULL;
 
     if (!isFlashLoadableEntry(pPgmHeader))
         return;
