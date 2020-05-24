@@ -58,8 +58,8 @@ endif
 endif
 
 # Flags to use when compiling binaries to run on this host system.
-HOST_GCCFLAGS := -O2 -g3 -Wall -Wextra -Werror -Wno-unused-parameter -MMD -MP
-HOST_GCCFLAGS += -ffunction-sections -fdata-sections -fno-common
+HOST_GCCFLAGS := -O2 -g3 -ffunction-sections -fdata-sections -fno-common -MMD -MP
+HOST_GCCFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unknown-warning-option -Wno-format-truncation
 HOST_GCCFLAGS += -include mri/CppUTest/include/CppUTest/MemoryLeakDetectorMallocMacros.h
 HOST_GPPFLAGS := $(HOST_GCCFLAGS) -std=gnu++98 -include mri/CppUTest/include/CppUTest/MemoryLeakDetectorNewMacros.h
 HOST_GCCFLAGS += -std=gnu90
