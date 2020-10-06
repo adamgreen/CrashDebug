@@ -27,7 +27,8 @@ const char g_HelloWorld[] = "Hello World!\n";
 
 TEST_GROUP(printfSpy)
 {
-    int m_Result;
+    int  m_Result;
+    char m_checkBuffer[32];
 
     void setup()
     {
@@ -48,17 +49,11 @@ TEST_GROUP(printfSpy)
         POINTERS_EQUAL(stdout, printfSpy_GetLastFile());
     }
 
-    char* CreateCheckBuffer(size_t BufferSize)
+    void CreateCheckBuffer(size_t BufferSize)
     {
-        char* pCheckString = NULL;
-
-        pCheckString = (char*)malloc(BufferSize + 1);
-        CHECK(NULL != pCheckString);
-
-        strncpy(pCheckString, g_HelloWorld, BufferSize);
-        pCheckString[BufferSize] = '\0';
-
-        return pCheckString;
+        CHECK ( BufferSize < sizeof(m_checkBuffer) );
+        strncpy(m_checkBuffer, g_HelloWorld, sizeof(m_checkBuffer));
+        m_checkBuffer[BufferSize] = '\0';
     }
 
     void printfCheckHelloWorldWithBufferOfSize(size_t BufferSize)
@@ -66,11 +61,8 @@ TEST_GROUP(printfSpy)
         printfSpy_Hook(BufferSize);
         m_Result = hook_printf(g_HelloWorld);
 
-        char* pCheckString = CreateCheckBuffer(BufferSize);
-
-        printfCheck(sizeof(g_HelloWorld)-1, pCheckString);
-
-        free(pCheckString);
+        CreateCheckBuffer(BufferSize);
+        printfCheck(sizeof(g_HelloWorld)-1, m_checkBuffer);
     }
 };
 
