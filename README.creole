@@ -89,9 +89,9 @@ tests.\\
 the unit tests.  **Windows** users would run {{{make CrashDebug.exe}}} instead.\\
 
 The build has been tested on the following operating systems:
-* macOS High Sierra
+* macOS Big Sur
 * Windows 10
-* Ubuntu 16.04
+* Ubuntu 20.04
 
 === GCOV Code Coverage Notes
 All intermediate binaries (*.o and *.a) for code coverage runs are found in the gcov/obj and gcov/lib directories.  If
