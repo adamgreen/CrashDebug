@@ -1,4 +1,4 @@
-/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2021  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -27,14 +27,16 @@
 
 static void displayCopyrightNotice(void)
 {
-    printf("\nCrashDebug - Cortex-M Post-Mortem Debugging Aid (" VERSION_STRING ")\n\n"
+    fprintf(stderr,
+           "\nCrashDebug - Cortex-M Post-Mortem Debugging Aid (" VERSION_STRING ")\n\n"
            COPYRIGHT_NOTICE
            "\n");
 }
 
 static void displayUsage(void)
 {
-    printf("Usage: CrashDebug (--elf elfFilename | --bin imageFilename baseAddress)\n"
+    fprintf(stderr,
+           "Usage: CrashDebug (--elf elfFilename | --bin imageFilename baseAddress)\n"
            "                   --dump dumpFilename\n"
            "                  [--alias baseAddress size redirectAddress]\n"
            "Where: NOTE: The --elf and --bin options are mutually exclusive.  Use one\n"
@@ -374,8 +376,6 @@ static uint8_t nibbleDigit(uint8_t byte)
 static void displayExceptionMessage(void)
 {
     const char* pExceptionMessage = getExceptionMessage();
-    if (pExceptionMessage[0] == '\0')
-        return;
     fprintf(stderr, "ERROR: %s\n", pExceptionMessage);
 }
 

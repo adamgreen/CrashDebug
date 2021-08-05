@@ -1,4 +1,4 @@
-/*  Copyright (C) 2013  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2021  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -44,9 +44,8 @@ TEST_GROUP(printfSpy)
     {
         LONGS_EQUAL(ExpectedLength, m_Result);
         STRCMP_EQUAL(pExpectedString, printfSpy_GetLastOutput());
-        STRCMP_EQUAL("", printfSpy_GetPreviousOutput());
+        POINTERS_EQUAL(NULL, printfSpy_GetPreviousOutput());
         LONGS_EQUAL(1, printfSpy_GetCallCount());
-        POINTERS_EQUAL(stdout, printfSpy_GetLastFile());
     }
 
     void CreateCheckBuffer(size_t BufferSize)
@@ -111,12 +110,48 @@ TEST(printfSpy, TwoCall)
     STRCMP_EQUAL("Line 1\r\n", printfSpy_GetPreviousOutput());
 }
 
-TEST(printfSpy, SendToStdErr)
+TEST(printfSpy, SendFourLinesToStdOut)
 {
     printfSpy_Hook(10);
-    POINTERS_EQUAL(NULL, printfSpy_GetLastFile());
+    hook_printf("Line 1\r\n");
+    hook_printf("Line 2\r\n");
+    hook_printf("Line 3\r\n");
+    hook_printf("Line 4\r\n");
+    STRCMP_EQUAL("Line 4\r\n", printfSpy_GetNthOutput(1));
+    STRCMP_EQUAL("Line 3\r\n", printfSpy_GetNthOutput(2));
+    STRCMP_EQUAL("Line 2\r\n", printfSpy_GetNthOutput(3));
+    STRCMP_EQUAL("Line 1\r\n", printfSpy_GetNthOutput(4));
+}
+
+TEST(printfSpy, SendOneLineToStdErr)
+{
+    printfSpy_Hook(10);
     hook_fprintf(stderr, "Line 1\r\n");
-    POINTERS_EQUAL(stderr, printfSpy_GetLastFile());
-    STRCMP_EQUAL("Line 1\r\n", printfSpy_GetLastOutput());
+    POINTERS_EQUAL(NULL, printfSpy_GetLastOutput());
     STRCMP_EQUAL("Line 1\r\n", printfSpy_GetLastErrorOutput());
+    POINTERS_EQUAL(NULL, printfSpy_GetPreviousErrorOutput());
+}
+
+TEST(printfSpy, SendTwoLinesToStdErr)
+{
+    printfSpy_Hook(10);
+    hook_fprintf(stderr, "Line 1\r\n");
+    hook_fprintf(stderr, "Line 2\r\n");
+    POINTERS_EQUAL(NULL, printfSpy_GetLastOutput());
+    POINTERS_EQUAL(NULL, printfSpy_GetPreviousOutput());
+    STRCMP_EQUAL("Line 2\r\n", printfSpy_GetLastErrorOutput());
+    STRCMP_EQUAL("Line 1\r\n", printfSpy_GetPreviousErrorOutput());
+}
+
+TEST(printfSpy, SendFourLinesToStdErr)
+{
+    printfSpy_Hook(10);
+    hook_fprintf(stderr, "Line 1\r\n");
+    hook_fprintf(stderr, "Line 2\r\n");
+    hook_fprintf(stderr, "Line 3\r\n");
+    hook_fprintf(stderr, "Line 4\r\n");
+    STRCMP_EQUAL("Line 4\r\n", printfSpy_GetNthErrorOutput(1));
+    STRCMP_EQUAL("Line 3\r\n", printfSpy_GetNthErrorOutput(2));
+    STRCMP_EQUAL("Line 2\r\n", printfSpy_GetNthErrorOutput(3));
+    STRCMP_EQUAL("Line 1\r\n", printfSpy_GetNthErrorOutput(4));
 }

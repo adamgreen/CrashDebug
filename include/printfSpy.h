@@ -1,4 +1,4 @@
-/*  Copyright (C) 2013  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2021  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -26,8 +26,10 @@ void        printfSpy_Unhook(void);
 
 const char* printfSpy_GetLastOutput(void);
 const char* printfSpy_GetPreviousOutput(void);
+const char* printfSpy_GetNthOutput(size_t n);
 const char* printfSpy_GetLastErrorOutput(void);
-FILE*       printfSpy_GetLastFile(void);
+const char* printfSpy_GetPreviousErrorOutput(void);
+const char* printfSpy_GetNthErrorOutput(size_t n);
 size_t      printfSpy_GetCallCount(void);
 
 

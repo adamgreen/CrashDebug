@@ -1,4 +1,4 @@
-/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2021  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -16,8 +16,8 @@
 
 /* Version Information. */
 #define VERSION_MAJOR       1
-#define VERSION_MINOR       6
-#define VERSION_BUILD       20190624
+#define VERSION_MINOR       7
+#define VERSION_BUILD       20210805
 #define VERSION_SUBBUILD    0
 
 #define VER_STR(X) VER_STR2(X)
@@ -27,7 +27,7 @@
 
 
 /* Copyright notice. */
-#define COPYRIGHT_NOTICE    "Copyright (C) 2019 Adam Green\n" \
+#define COPYRIGHT_NOTICE    "Copyright (C) 2021 Adam Green\n" \
                             "This is free software; see the source for copying conditions.  There is NO\n" \
                             "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 

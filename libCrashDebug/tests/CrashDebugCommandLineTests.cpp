@@ -1,4 +1,4 @@
-/*  Copyright (C) 2019  Adam Green (https://github.com/adamgreen)
+/*  Copyright (C) 2021  Adam Green (https://github.com/adamgreen)
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -208,8 +208,9 @@ TEST_GROUP(CrashDebugCommandLine)
         CHECK_EQUAL(expectedException, getExceptionCode());
         clearExceptionCode();
         STRCMP_EQUAL(pExpectedExceptionMessage, getExceptionMessage());
-        STRCMP_EQUAL("ERROR:", printfSpy_GetLastErrorOutput());
-        STRCMP_EQUAL(g_usageString, printfSpy_GetLastOutput());
+        STRCMP_EQUAL("ERROR:", printfSpy_GetNthErrorOutput(3));
+        STRCMP_EQUAL("\nCrash", printfSpy_GetNthErrorOutput(2));
+        STRCMP_EQUAL(g_usageString, printfSpy_GetNthErrorOutput(1));
     }
 
     void createTestFiles()
